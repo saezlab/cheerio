@@ -1,0 +1,16 @@
+{
+  "input": {
+    "menu": "Welcome",
+    "select_gene": null,
+    "signature_source": "directed",
+    "submit": 0,
+    "take_example_data": false,
+    "user_input": null
+  },
+  "output": {
+
+  },
+  "export": {
+
+  }
+}

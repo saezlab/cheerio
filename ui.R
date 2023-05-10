@@ -4,12 +4,12 @@ source("sub/helper.R")
 ui = function(request) {
   fluidPage(
     useShinyjs(),
-    tags$head(includeScript("google-analytics.js")),
+    #tags$head(includeScript("google-analytics.js")),
     navbarPage(
       id = "menu", 
       title = div(img(src="logo_saezlab.png", width="25", height="25"),
-                  "ReHeat-App"),
-      windowTitle = "ReHeat",
+                  "CHROMA"),
+      windowTitle = "Murine Cardiac Hypertrophy",
       collapsible=T,
       
       #### Welcome ####
@@ -31,27 +31,32 @@ ui = function(request) {
         sidebarPanel(
           includeMarkdown("inst/query_genes_sidebar.md"),
           pickerInput(inputId = "select_gene", label = "Select gene(s)",
-                      choices = sort(unique(contrasts$gene)), multiple = T,
+                      choices = sort(unique(obj.list$TAC$RNA$`2d`$MgiSymbol)), multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=10, `max-options` = 10))
+                                     size=10, `max-options` = 10)),
+          checkboxGroupInput(inputId= "contrasts", label= "Select contrasts", 
+                             selected = NULL,
+                             inline = FALSE, width = NULL, 
+                             choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
+                             choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
         ),
         mainPanel(
-          h4("Expression of queried genes"),
-          plotlyOutput("gene_regulation_boxplot", width = "100%", height = "600px") %>%
-            withSpinner(),
-          h4("Ranking of queried genes"),
-          plotlyOutput("rank_position", width = "100%", height = "125px") %>%
+          h4("Regulation in Murine Cardiac Hypertrophy models"),
+          plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
+          h4("Regulation in Human Heart Failure studies"),
+          plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
             withSpinner(),
           h4("Distribution of mean t-values"),
           plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
             withSpinner(),
+          h4("Ranking of queried genes"),
+          plotlyOutput("rank_position", width = "100%", height = "125px") %>%
+            withSpinner(),
+          h4("Regulation in Fetal Hearts"),
+          plotOutput("fetal_gene_expression_plots"),
+        
           hr(),
-          h4("Raw data"),
-          tabsetPanel(
-            type = "tabs",
-            tabPanel("Consensus", DT::dataTableOutput("summary_sub")),
-            tabPanel("Individual", DT::dataTableOutput("individual_sub"))
-          )
+         
         )
       ),
       

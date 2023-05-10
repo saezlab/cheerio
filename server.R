@@ -2,34 +2,70 @@
 server = function(input, output, session) {
   
 #### Query genes ####
-# boxplots
-output$gene_regulation_boxplot = renderPlotly({
-  if (!is.null(input$select_gene)) {
-    gene_regulation_boxplot = contrasts %>%
-      # filter(gene %in% c("MYC")) %>%
-      filter(gene %in% input$select_gene) %>%
-      ggplot(aes(x = fct_reorder(gene, t, median), y = t, label = study)) +
-      geom_boxplot() +
-      geom_point(aes(color = study), size = 4, alpha = 0.6) +
-      theme_classic() +
-      labs(x = "Queried genes", y = "t-value", color = "Study") +
-      theme(panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            axis.text = element_text(size= 11)) +
-      geom_hline(yintercept = 0, color = "grey", linetype = 2) +
-      # geom_vline(xintercept = length(HFgenes_up)+0.5, color = "black", linetype =1) +
-      ggtitle("")
-    
-    ggplotly(gene_regulation_boxplot, tooltip = c("label"))
-
+# cardiac hypertrophy:
+output$gene_expression_plots = renderPlot({
+  if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts))  {
+    pls= map(input$select_gene, function(x){
+      contrasts %>% 
+        filter(MgiSymbol==x, model != "fetal")%>%
+        mutate(exp.group= paste(modal, tp, sep= "_"),
+               sig= FDR<0.05)%>%
+        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
+        facet_grid(rows= vars(model))+
+        #geom_boxplot()+
+        geom_hline(yintercept = 0, color= "black")+
+        geom_col(width= 0.4, color ="black") +
+        theme_cowplot() +
+        scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                     "FALSE"="orange"))+
+        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+        theme(#panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+        coord_flip()+
+        ggtitle(x)
+      
+    })
+    p1= cowplot::plot_grid(plotlist =  pls)
+    p1
   }
 })
   
+
+# human HF: 
+output$HFgene_regulation_boxplot = renderPlot({
+  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
+    pls= map(input$select_gene, function(x){
+      contrasts_HF %>% 
+        filter(gene== toupper(x))%>%
+        mutate( sig= adj.P.Val<0.05)%>%
+        ggplot(aes(x = study , y = logFC, fill = sig)) +
+        #facet_grid(rows= vars(model))+
+        #geom_boxplot()+
+        geom_col(width= 0.4, color ="black") +
+        theme_cowplot() +
+        scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                     "FALSE"="orange"))+
+        labs(x = "HF Study", y = "log fold change", fill = "FDR<0.05") +
+        theme(#panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+        coord_flip()+
+        ggtitle(x)
+      })
+    p1= cowplot::plot_grid(plotlist =  pls)
+    p1
+    
+  }
+})
+
 # plot for rank positions
 output$rank_position = renderPlotly({
-  if (!is.null(input$select_gene)) {
+  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
     sub_ranks = ranks %>%
-      filter(gene %in% input$select_gene)
+      filter(gene %in% toupper(input$select_gene))
     
     max_rank = max(ranks$rank)
     
@@ -53,13 +89,14 @@ output$rank_position = renderPlotly({
     ggplotly(rank_plot, tooltip = c("label", "x"))
   }
 })
- 
+
+
 # distribution of mean t-values 
 output$mean_t_dist = renderPlotly({
-  if (!is.null(input$select_gene)) {
+  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
     # density
     sub_ranks = ranks %>%
-      filter(gene %in% input$select_gene)
+      filter(gene %in% toupper(input$select_gene))
     dens = ranks %>%
       ggplot(aes(x=mean_t, label = gene)) +
       stat_density(geom = "line") +
@@ -72,6 +109,38 @@ output$mean_t_dist = renderPlotly({
   }
 })
   
+
+#fetal gene expression:
+output$fetal_gene_expression_plots = renderPlot({
+  if (!is.null(input$select_gene) & ("Fetal" %in% input$contrasts))  {
+    pls= map(input$select_gene, function(x){
+      contrasts %>% 
+        filter(MgiSymbol==x, 
+               model == "fetal")%>%
+        mutate(exp.group= paste(modal, tp, sep= "_"),
+               sig= FDR<0.05)%>%
+        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
+        #geom_boxplot()+
+        geom_hline(yintercept = 0, color= "black")+
+        geom_col(width= 0.4, color ="black") +
+        theme_cowplot() +
+        scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                     "FALSE"="orange"))+
+        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+        theme(#panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+        coord_flip()+
+        ggtitle(x)
+      
+    })
+    p1= cowplot::plot_grid(plotlist =  pls)
+    p1
+  }
+})
+
+
 # subsetted data frame of gene expression
 output$individual_sub = DT::renderDataTable({
   if (!is.null(input$select_gene)) {

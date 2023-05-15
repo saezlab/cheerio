@@ -1,9 +1,10 @@
 #### Gene Query
 
-<br>Select genes of interest below to explore their role in the consensus signature of heart failure (HF-CS).</br>
-Following results are presented:
+<br>Select genes of interest below to explore their role in caridac hypertrophy.</br>
+Following data sets can be queried:
 
-- **Expression** of queried gene(s), as reported by single studies. Expression is displayed as a t-value resulting from the individual differential expression analysis
-- **Ranking** of queried gene(s) in HF-CS. The lower the rank the more consistent the deregulation of that gene was observed in all studies
-- **Mean t-value** of queried gene(s) compared to mean t-value of all genes in the HF-CS
-- **Raw data** of queried genes (from individal studies and from meta-analysis) to download 
+- **Murine physiologic and pathologic hypertrophy**, in vivo, bulk RNAseq + bulk RIBOseq
+- **Human heart failure** bulk RNAseq, we use ReHeaT, an assembly of 16 heart failure studies
+- **Human heart failure** single cell RNAseq, we display cell type specific dysregulation reported by Chaffin et. al
+- **human fetal hearts** bulk RNAseq, two fetal studies compared fetal to healthy adult hearts
+

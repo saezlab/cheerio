@@ -1,3 +1,6 @@
+library(BiocManager)
+options(repos = BiocManager::repositories())
+
 library(shiny)
 library(shinyWidgets)
 library(shinyhelper)
@@ -14,28 +17,43 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 library(tidyr)
-library(fgsea)
+#library(fgsea)
+#library(decoupleR)
 library(readr)
 library(stringr)
 library(cowplot)
 library(shinycssloaders)
-
+#install.packages(c("shinytest", "showimage", "webdriver"))
 theme_set(theme_cowplot())
 
 # options(repos = BiocManager::repositories())
 
 # load static data
 
-gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
+#gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
+##hypertrophy mice
 contrasts = readRDS("data/contrasts.hypertrophy.rds")
+tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
+
+#sc chaffin dcm, hcm
+sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
+  as_tibble()%>%
+  mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
+         Comparison= str_replace(Comparison, "vs", "vs\n"),
+         Comparison = factor(Comparison, levels= c("DCMvs\nNF", "HCMvs\nNF", "DCMvs\nHCM")))
+
+##reheat
 contrasts_HF = readRDS("data/study_contrasts.rds")
 ranks = readRDS("data/study_ranks.rds")
-overview = readRDS("data/study_overview.rds")
+
+directed_signature = readRDS("data/signature.rds")
+undirected_signature = readRDS("data/fisher_signature.rds")
+#overview = readRDS("data/study_overview.rds")
 #progeny = readRDS("data/PROGENy_results.rds")
 #dorothea = readRDS("data/dorothea_results.rds")
 #gsea = readRDS("data/GSEA_results.rds")
 #mi_gsea = readRDS("data/GSEA_mir_results.rds")
-directed_signature = readRDS("data/signature.rds")
-undirected_signature = readRDS("data/fisher_signature.rds")
 
+
+#example
 example_geneset = read_csv("data/multiple_geneset.csv")

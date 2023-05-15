@@ -2,7 +2,9 @@
 server = function(input, output, session) {
   
 #### Query genes ####
-# cardiac hypertrophy:
+
+## murine cardiac Hyp:
+#  cardiac hypertrophy logFCs:
 output$gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts))  {
     pls= map(input$select_gene, function(x){
@@ -19,7 +21,9 @@ output$gene_expression_plots = renderPlot({
         scale_fill_manual(values = c("TRUE" = "darkgreen",
                                      "FALSE"="orange"))+
         labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-        theme(#panel.grid.major = element_blank(),
+        theme(panel.grid.major = element_line(color = "grey",
+                                              size = 0.1,
+                                              linetype = 1),
           panel.grid.minor = element_blank(),
           axis.text = element_text(size= 11), 
           axis.title = element_text(size= 10)) +
@@ -31,9 +35,36 @@ output$gene_expression_plots = renderPlot({
     p1
   }
 })
-  
 
-# human HF: 
+# cardiac hypertrophy show correlation::  
+output$cardiac_hyper_corr = renderPlot({
+  if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts)){
+    
+    p1= contrasts %>%
+      filter(model!= "fetal")%>%
+      select(-PValue, -FDR)%>%
+      pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
+      mutate(labels= ifelse(MgiSymbol %in% input$select_gene, MgiSymbol, ""),
+             labls= factor(labels, levels= c("", input$select_gene)),
+             alphas= factor(ifelse(labels=="", "bg","normal"))
+             )%>%
+      ggplot(aes(x= rna, y= ribo, color = labels,size= alphas, alpha= alphas))+
+      facet_grid(rows= vars(model), 
+                 cols= vars(tp))+
+      geom_point(show.legend = T)+
+      scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1))+
+      scale_size_manual(values=c("bg"= 0.5, "normal"= 2))+
+      #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
+      theme(panel.grid.major = element_line(color = "grey",
+                                            size = 0.1,
+                                            linetype = 1))+
+      labs(alpha= "")
+    
+    p1
+  }
+})
+
+## human HF: 
 output$HFgene_regulation_boxplot = renderPlot({
   if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
     pls= map(input$select_gene, function(x){
@@ -48,7 +79,9 @@ output$HFgene_regulation_boxplot = renderPlot({
         scale_fill_manual(values = c("TRUE" = "darkgreen",
                                      "FALSE"="orange"))+
         labs(x = "HF Study", y = "log fold change", fill = "FDR<0.05") +
-        theme(#panel.grid.major = element_blank(),
+        theme(panel.grid.major = element_line(color = "grey",
+                                              size = 0.1,
+                                              linetype = 1),
           panel.grid.minor = element_blank(),
           axis.text = element_text(size= 11), 
           axis.title = element_text(size= 10)) +
@@ -90,7 +123,6 @@ output$rank_position = renderPlotly({
   }
 })
 
-
 # distribution of mean t-values 
 output$mean_t_dist = renderPlotly({
   if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
@@ -108,19 +140,17 @@ output$mean_t_dist = renderPlotly({
     ggplotly(dens, tooltip = c("label"))
   }
 })
-  
 
-#fetal gene expression:
-output$fetal_gene_expression_plots = renderPlot({
-  if (!is.null(input$select_gene) & ("Fetal" %in% input$contrasts))  {
+##  single cell human
+output$HF_single = renderPlot({
+  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
     pls= map(input$select_gene, function(x){
-      contrasts %>% 
-        filter(MgiSymbol==x, 
-               model == "fetal")%>%
-        mutate(exp.group= paste(modal, tp, sep= "_"),
-               sig= FDR<0.05)%>%
-        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
-        #geom_boxplot()+
+      sc.gex %>% 
+        filter(Gene==toupper(x))%>%
+        # mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
+        #        Comparison = factor(Comparison, levels= c("DCMvsNF", "HCMvsNF", "DCMvsHCM")))%>%
+        ggplot(aes(x = CellType, y = logFC, fill = Significant)) +
+        facet_grid(rows= vars(Comparison))+
         geom_hline(yintercept = 0, color= "black")+
         geom_col(width= 0.4, color ="black") +
         theme_cowplot() +
@@ -137,47 +167,67 @@ output$fetal_gene_expression_plots = renderPlot({
     })
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
+    
   }
 })
 
+## fetal gene expression :
+output$fetal_gene_expression_plots = renderPlot({
+  if (!is.null(input$select_gene) & ("Fetal" %in% input$contrasts))  {
+    pls= map(input$select_gene, function(x){
+      contrasts %>% 
+        filter(MgiSymbol==x, 
+               model == "fetal")%>%
+        mutate(exp.group= paste(modal, tp, sep= "_"),
+               sig= FDR<0.05)%>%
+        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
+        #geom_boxplot()+
+        geom_hline(yintercept = 0, color= "black")+
+        geom_col(width= 0.4, color ="black") +
+        theme_cowplot() +
+        scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                     "FALSE"="orange"))+
+        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+        theme(panel.grid.major = element_line(color = "grey",
+                                              size = 0.1,
+                                              linetype = 1),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+        coord_flip()+
+        ggtitle(x)
+      
+    })
+    p1= cowplot::plot_grid(plotlist =  pls)
+    p1
+  }
+})
 
-# subsetted data frame of gene expression
-output$individual_sub = DT::renderDataTable({
-  if (!is.null(input$select_gene)) {
-    contrasts %>%
-      filter(gene %in% input$select_gene) %>%
-      mutate(AveExpr = signif(AveExpr,3),
-             logFC = signif(logFC,3),
-             t = signif(t,3),
-             B = signif(B,3),
-             P.Value = scientific(P.Value),
-             adj.P.Val = scientific(adj.P.Val),
-             study = as_factor(study)) %>%
-      DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                    extensions = "Buttons", rownames = F,
-                    option = list(scrollX = T, 
-                                  autoWidth = T, 
-                                  dom = "Bfrtip",
-                                  buttons = c("copy", "csv", "excel")))
-  }
+## remove input button:
+observeEvent(input$reset_input, {
+  updatePickerInput(session,
+                    inputId = "select_gene", selected = character(0)
+                    )
+  #updateTextInput(session, "mytext", value = "test")
 })
-  
-# subsetted dataframe of meta analysis
-output$summary_sub = DT::renderDataTable({
-  if (!is.null(input$select_gene)) {
-    ranks %>%
-      filter(gene %in% input$select_gene) %>%
-      mutate(mean_lfc = signif(mean_lfc,3),
-             mean_t = signif(mean_t,3),
-             fisher_pvalue = scientific(fisher_pvalue)) %>%
-      DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                    extensions = "Buttons", rownames = F,
-                    option = list(scrollX = T, 
-                                  autoWidth = T, 
-                                  dom = "Bfrtip",
-                                  buttons = c("copy", "csv", "excel")))
-  }
-})
+
+
+# # subsetted dataframe of meta analysis
+# output$summary_sub = DT::renderDataTable({
+#   if (!is.null(input$select_gene)) {
+#     ranks %>%
+#       filter(gene %in% input$select_gene) %>%
+#       mutate(mean_lfc = signif(mean_lfc,3),
+#              mean_t = signif(mean_t,3),
+#              fisher_pvalue = scientific(fisher_pvalue)) %>%
+#       DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+#                     extensions = "Buttons", rownames = F,
+#                     option = list(scrollX = T, 
+#                                   autoWidth = T, 
+#                                   dom = "Bfrtip",
+#                                   buttons = c("copy", "csv", "excel")))
+#   }
+# })
 
 #### Input data ####
 # load user input (gene sets)
@@ -197,8 +247,10 @@ gs = reactive({
 
 # get which signature should be used (directed vs undirected)
 signature = reactive({
-  switch(input$signature_source,
-         "directed" = directed_signature,
+  
+  ## add statement of 
+  switch(input$contrasts_gsea,
+         "directed_HF" = directed_signature,
          "undirected" = undirected_signature)
 })
 
@@ -252,9 +304,29 @@ output$gsea_res_plots = renderPlot({
 })
 
 
-#### Meta analysis results ####
-output$individual = DT::renderDataTable({
+####Download center ####
+
+# make gene contrast data accessible:
+output$mouse_hypertrophyDT = DT::renderDataTable({
   contrasts %>%
+    select(modal, model, tp, MgiSymbol, logFC, FDR)%>%
+    filter(!grepl("fetal", tp))%>%
+    mutate(logFC = signif(logFC,3),
+           FDR = scientific(FDR),
+           model = as_factor(model),
+           modal = as_factor(modal),
+           tp = as_factor(tp)) %>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+
+})
+
+output$human_HF_bulk_indDT = DT::renderDataTable({
+  contrasts_HF %>%
     mutate(AveExpr = signif(AveExpr,3),
            logFC = signif(logFC,3),
            t = signif(t,3),
@@ -262,26 +334,56 @@ output$individual = DT::renderDataTable({
            P.Value = scientific(P.Value),
            adj.P.Val = scientific(adj.P.Val),
            study = as_factor(study)) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+    DT::datatable(escape=F, filter = "top", selection =  "multiple",
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
+                  option = list(scrollX = T,
+                                autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
 })
 
-output$summary = DT::renderDataTable({
+output$human_HF_bulk_summDT = DT::renderDataTable({
   ranks %>%
     mutate(mean_lfc = signif(mean_lfc,3),
            mean_t = signif(mean_t,3),
            fisher_pvalue = scientific(fisher_pvalue)) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
+                  option = list(scrollX = T,
+                                autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
   })
+
+output$human_fetalDT = DT::renderDataTable({
+  contrasts %>%
+    select(tp, MgiSymbol, logFC, FDR)%>%
+    filter(grepl("fetal", tp))%>%
+    mutate(logFC = signif(logFC,3),
+           FDR = scientific(FDR),
+           #model = as_factor(model),
+           #modal = as_factor(modal),
+           tp = as_factor(tp)) %>%
+    rename(fetal_study= tp)%>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
+output$human_scDT = DT::renderDataTable({
+  sc.gex %>%
+    mutate(Comparison= factor(Comparison),
+           CellType= factor(CellType)) %>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
 
 #### Functional analysis ####
 # progeny
@@ -300,12 +402,43 @@ output$progeny_table = DT::renderDataTable({
 })
 
 # dorothea
-output$dorothea_table = DT::renderDataTable({
-  dorothea %>%
-    mutate(NES = signif(NES, 3),
-           pvalue = scientific(pvalue),
-           adj_pvalue = scientific(adj_pvalue),
-           RegulonName = factor(RegulonName, levels = sort(RegulonName))) %>%
+output$tf_hypertrophy_plot = renderPlot({
+    if (!is.null(input$select_tf) & ("Murine_Hypertrophy" %in% input$contrasts))  {
+      pls= map(input$select_tf, function(x){
+        tf_hypertrophy %>% 
+          filter(source ==x)%>%
+          mutate(condition= paste(tp, modal,sep =  "_"))%>%
+          ggplot(aes(x = condition, y =  score, fill = sig)) +
+          facet_grid(rows= vars(model))+
+          #geom_boxplot()+
+          geom_hline(yintercept = 0, color= "black")+
+          geom_col(width= 0.4, color ="black") +
+          theme_cowplot() +
+          scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                       "FALSE"="orange"))+
+          labs(x = "experimental group", y = "TF activity", fill = "p<0.05") +
+          theme(panel.grid.major = element_line(color = "grey",
+                                                size = 0.1,
+                                                linetype = 1),
+                panel.grid.minor = element_blank(),
+                axis.text = element_text(size= 11), 
+                axis.title = element_text(size= 10)) +
+          coord_flip()+
+          ggtitle(x)
+        
+      })
+      p1= cowplot::plot_grid(plotlist =  pls)
+      p1
+    }
+})
+
+output$dorothea_table_hypertrophy = DT::renderDataTable({
+  tf_hypertrophy %>%
+    select(-statistic)%>%
+    mutate(score = signif(score, 3),
+           p_value = scientific(p_value)) %>%
+    #adj_pvalue = scientific(adj_pvalue),
+    #source = factor(source, levels = sort(source))) %>%
     DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
@@ -314,68 +447,8 @@ output$dorothea_table = DT::renderDataTable({
                                 buttons = c("copy", "csv", "excel")))
 })
 
-# gsea
-output$gsea_table = DT::renderDataTable({
-  gsea %>%
-    mutate(NES = signif(NES, 3),
-           ES = signif(ES, 3),
-           pval = scientific(pval),
-           padj = scientific(padj),
-           database = factor(database, levels = sort(unique(database))),
-           pathway = factor(pathway, levels = sort(unique(pathway)))) %>%
-    select(-leadingEdge) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-# gsea with microRNA
-output$mi_gsea_table = DT::renderDataTable({
-  mi_gsea %>%
-    mutate(NES = signif(NES, 3),
-           pvalue = scientific(pvalue),
-           adj_pvalue = scientific(adj_pvalue),
-           RegulonName = factor(RegulonName, 
-                                levels = sort(unique(RegulonName)))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
 
 
-#### Study overview ####
-output$overview = DT::renderDataTable({
-  overview %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel"),
-                                pageLength = 14))
-})
-
-disable("submit")
-
-observeEvent({
-  input$user_input
-  input$take_example_data
-  }, {
-    if (input$take_example_data == T) {
-      enable("submit")
-      disable("user_input")
-    } else if (input$take_example_data == F & is.null(input$user_input)) {
-      disable("submit")
-      enable("user_input")
-    } else if (input$take_example_data == F & !is.null(input$user_input))
-      enable("submit")
-  })
 
 hide("loading-content", TRUE, "fade")  
 

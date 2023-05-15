@@ -1,6 +1,9 @@
 
-
+setwd(dir = "~/R-projects/Collaborations/shiny_hypertophy/")
 library(tidyverse)
+
+# mouse_hypertrophy data ----------------------------------------------------------------------
+
 
 obj.list =
   list("TAC"= 
@@ -92,9 +95,10 @@ fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>%
   mutate(tp= "fetal1", 
          modal= "rna",
          model ="fetal") 
+
 fetal.df= 
 rbind(fetal1, fetal2)%>% 
-  mutate(gene = str_to_title(gene), 
+  mutate(gene = str_to_title(gene), ## change here for adequate homologue mapping
          GeneDescription= "")%>%
   rename(MgiSymbol= gene, 
          PValue= P.Value,
@@ -159,7 +163,7 @@ cowplot::plot_grid(plotlist = pls)
 ## raw gene expression
 
 genes= c("Nppa", "Nppb")
-
+genes= c("NPPA", "NPPB")
 
 obj.list$TAC$RNA$`2d`%>%
   select(-"...1"  ,
@@ -182,7 +186,7 @@ colnames(obj.list$TAC$RNA$`2d`)
 ##
 
 contrasts_HF
-genes= c("NPPA", "NPPB")
+
 pls= map(genes, function(x){
   contrasts_HF %>% 
     filter(gene==x)%>%
@@ -203,3 +207,59 @@ pls= map(genes, function(x){
 })
 pls  
 cowplot::plot_grid(plotlist = pls)
+
+
+## plot the correlation between ribo and rna
+
+p1= contrasts %>%
+  filter(model!= "fetal")%>%
+  select(-PValue, -FDR)%>%
+  pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
+  mutate(labels= ifelse(MgiSymbol %in% genes, MgiSymbol, ""))%>%
+  ggplot(aes(x= rna, y= ribo, color = labels))+
+  facet_grid(rows= vars(model), 
+             cols= vars(tp))+
+  geom_point(show.legend = T)+
+  #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
+  theme(panel.grid.major = element_line(color = "grey",
+                                          size = 0.1,
+                                          linetype = 1))
+
+p1
+p2= ggplotly(p1, tooltip = c("MgiSymbol"))
+toWebGL(p2)
+partial_bundle(p2)
+
+
+
+
+# Chaffin_ HCM DCM atlas ----------------------------------------------------------------------
+
+sc.gex= read.csv("data/single_geneset.csv")%>% as_tibble()
+
+genes=c("NPPA", "NPPB")
+
+pls= map(genes, function(x){
+  sc.gex %>% 
+    filter(Gene==x)%>%
+    mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
+           Comparison = factor(Comparison, levels= c("DCMvsNF", "HCMvsNF", "DCMvsHCM")))%>%
+    ggplot(aes(x = CellType, y = logFC, fill = Significant)) +
+    facet_grid(rows= vars(Comparison))+
+    geom_hline(yintercept = 0, color= "black")+
+    geom_col(width= 0.4, color ="black") +
+    theme_cowplot() +
+    scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                  "FALSE"="orange"))+
+    labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+    theme(#panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text = element_text(size= 11), 
+      axis.title = element_text(size= 10)) +
+    coord_flip()+
+    ggtitle(x)
+  
+})
+
+cowplot::plot_grid(plotlist = pls)
+unique(sc.gex$Significant)

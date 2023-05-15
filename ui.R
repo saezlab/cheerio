@@ -30,32 +30,52 @@ ui = function(request) {
         icon = icon("search"),
         sidebarPanel(
           includeMarkdown("inst/query_genes_sidebar.md"),
-          pickerInput(inputId = "select_gene", label = "Select gene(s)",
-                      choices = sort(unique(obj.list$TAC$RNA$`2d`$MgiSymbol)), multiple = T,
+          pickerInput(inputId = "select_gene", 
+                      label = "Select gene(s)",
+                      choices = sort(unique(contrasts$MgiSymbol)), 
+                      multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=10, `max-options` = 10)),
+                                     size=6, `max-options` = 6),
+                      selected = c("Nppb", "Nppa", "Postn", "Col1a1", "Myh7", "Myh6" ) 
+                      ),
+          
+          actionButton("reset_input", "Reset genes"),
+          
           checkboxGroupInput(inputId= "contrasts", label= "Select contrasts", 
-                             selected = NULL,
+                             selected = c("Murine_Hypertrophy"),
                              inline = FALSE, width = NULL, 
                              choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
                              choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
         ),
         mainPanel(
-          h4("Regulation in Murine Cardiac Hypertrophy models"),
+          h3("Regulation in Murine Cardiac Hypertrophy models"),
+          h5("Gene expression regulation"),
           plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
-          h4("Regulation in Human Heart Failure studies"),
+          h5("Ribo-seq and RNA-seq correlation"),
+          plotOutput("cardiac_hyper_corr"),
+          h3("Regulation in Human Heart Failure studies"),
+          h5("Regulation in single bulk studies"),
+          h6("HF bulk transcripomic studies"),
           plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
             withSpinner(),
-          h4("Distribution of mean t-values"),
+          h5("Distribution of mean t-values"),
+          h6("Mean t-values distribution of all bulk studies"),
           plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
             withSpinner(),
-          h4("Ranking of queried genes"),
+          h5("Ranking of queried genes"),
+          h6("Consensus ranking, the higher the rank the more consistently is the gene regulated in human HF"),
           plotlyOutput("rank_position", width = "100%", height = "125px") %>%
             withSpinner(),
-          h4("Regulation in Fetal Hearts"),
+        
+          h5("Single cell gene expression"),
+          h6("Celltype regulation compared between non failing, DCM and HCM"),
+          plotOutput("HF_single", width = "100%") %>%
+            withSpinner(),
+          
+          h3("Regulation in Fetal Hearts"),
           plotOutput("fetal_gene_expression_plots"),
         
-          hr(),
+          hr()
          
         )
       ),
@@ -74,6 +94,12 @@ ui = function(request) {
              second column named 'geneset' must be added containing the gene set 
              name/identifier."),
           fileInput("user_input", label="Upload gene sets (.csv)"),
+          checkboxGroupInput(inputId= "contrasts_gsea", label= "Select contrasts to perform enrichment on", 
+                             selected = c("Murine_Hypertrophy"),
+                             inline = FALSE, width = NULL, 
+                             choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
+                             choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" )),
+          
           p("Choose whether you would like to test your gene set agains a 
              directed or undirected signature."),
           radioButtons("signature_source", "Signature", 
@@ -91,56 +117,86 @@ ui = function(request) {
             withSpinner()
         )
       ),
-      #### Meta analysis results ####
-      tabPanel(
-        title = "Consensus signature",
-        icon = icon("table"),
-        sidebarPanel(
-          includeMarkdown("inst/meta_analysis_results_sidebar.md")
-          ),
-        mainPanel(
-          tabsetPanel(
-            type = "tabs",
-            tabPanel("Consensus", DT::dataTableOutput("summary")),
-            tabPanel("Individual", DT::dataTableOutput("individual"))
-          )
-        )
-      ),
       
       #### Functional analysis ####
       tabPanel(
         title = "Functional analysis",
         icon = icon("chart-line"),
         sidebarPanel(
-          includeMarkdown("inst/functional_analysis_sidebar.md")
+          includeMarkdown("inst/functional_analysis_sidebar.md"),
+          pickerInput(inputId = "select_tf", 
+                      label = "Select transcription factor(s)",
+                      choices = sort(unique(tf_hypertrophy$source)), 
+                      multiple = T,
+                      options = list(`live-search` = TRUE,
+                                     size=6, `max-options` = 6),
+                      selected = c("Gata4", "Gata3" )
+          ),
+          selectizeInput("select_tfcontrast", "Select contrast", 
+                         multiple = F, 
+                         choices = c("murine hypertrophy", 
+                                     "human_HF", 
+                                     "human_fetal"))
         ),
         mainPanel(
+          h3("Estimated TF activity in Murine Cardiac Hypertrophy models"),
+          h5("TF activity"),
+          plotOutput("tf_hypertrophy_plot"),#, width = "100%", height = "600px"),
+          
+          h3("Access, query and download raw data"),
+          h5("TF activity"),
           tabsetPanel(
             type = "tabs",
             tabPanel("PROGENy", DT::dataTableOutput("progeny_table")),
-            tabPanel("DoRothEA", DT::dataTableOutput("dorothea_table")),
+            tabPanel("DoRothEA",
+                     DT::dataTableOutput("dorothea_table_hypertrophy")),
             tabPanel("GSEA", DT::dataTableOutput("gsea_table")),
             tabPanel("GSEA to microRNAs", DT::dataTableOutput("mi_gsea_table"))
             )
           )
         ),
       
-      #### Study overview ####
+      
+      #### Download Center ####
       tabPanel(
-        title = "Study overview",
-        icon = icon("database"),
+        title = "Download Center",
+        icon = icon("table"),
         sidebarPanel(
-          includeMarkdown("inst/overview_sidebar.md")
+          includeMarkdown("inst/meta_analysis_results_sidebar.md")
         ),
         mainPanel(
-          DT::dataTableOutput("overview"),
-          br(),
-          includeMarkdown("inst/overview.md")
+          h5("Download gene expression contrast data"),
+          h6("Select your desired contrast, explore and sort data in table format or download"),
+          tabsetPanel(
+            type = "tabs",
+            tabPanel("Murine Hypertrophy", DT::dataTableOutput("mouse_hypertrophyDT")),
+            tabPanel("Human HF Bulk individual",  DT::dataTableOutput("human_HF_bulk_indDT")),
+            tabPanel("Human HF Bulk summary",  DT::dataTableOutput("human_HF_bulk_summDT")),
+            tabPanel("Human HF single cell", DT::dataTableOutput("human_scDT")),
+            tabPanel("Human fetal bulk", DT::dataTableOutput("human_fetalDT"))
+          ),
+          h6("*Human HF Bulk individual: Contains single study results from ReHeaT"),
+          h6("*Human HF Bulk summary: Contains consensus ranking (summary of single studies) results from ReHeaT")
         )
       ),
       
+      
+      #### Study overview ####
+      # tabPanel(
+      #   title = "Study overview",
+      #   icon = icon("database"),
+      #   sidebarPanel(
+      #     includeMarkdown("inst/overview_sidebar.md")
+      #   ),
+      #   mainPanel(
+      #     DT::dataTableOutput("overview"),
+      #     br(),
+      #     includeMarkdown("inst/overview.md")
+      #   )
+      # ),
+      
       #### Footer ####
-      footer = column(12, align="center", "ReHeaT-App 2020")
+      footer = column(12, align="center", "CH-App 2020")
     ) # close navbarPage
   ) # close fluidPage
 }

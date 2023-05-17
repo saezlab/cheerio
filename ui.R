@@ -130,7 +130,7 @@ ui = function(request) {
                       multiple = T,
                       options = list(`live-search` = TRUE,
                                      size=6, `max-options` = 6),
-                      selected = c("Gata4", "Gata3" )
+                      selected = c("Gata4", "Gata3", "Hif1a")
           ),
           selectizeInput("select_tfcontrast", "Select contrast", 
                          multiple = F, 
@@ -143,16 +143,21 @@ ui = function(request) {
           h5("TF activity"),
           plotOutput("tf_hypertrophy_plot"),#, width = "100%", height = "600px"),
           
-          h3("Access, query and download raw data"),
-          h5("TF activity"),
-          tabsetPanel(
-            type = "tabs",
-            tabPanel("PROGENy", DT::dataTableOutput("progeny_table")),
-            tabPanel("DoRothEA",
-                     DT::dataTableOutput("dorothea_table_hypertrophy")),
-            tabPanel("GSEA", DT::dataTableOutput("gsea_table")),
-            tabPanel("GSEA to microRNAs", DT::dataTableOutput("mi_gsea_table"))
-            )
+          h3("Pathway activity"),
+          plotOutput("progeny_hypertropy_plot"),
+          # 
+          # h3("Access, query and download raw data"),
+          # h5("TF activity"),
+          # tabsetPanel(
+          #   type = "tabs",
+          #   tabPanel("PROGENy", DT::dataTableOutput("progeny_table")),
+          #   tabPanel("DoRothEA",
+          #            DT::dataTableOutput("dorothea_table_hypertrophy")),
+          #   tabPanel("GSEA", DT::dataTableOutput("gsea_table")),
+          #   tabPanel("GSEA to microRNAs", DT::dataTableOutput("mi_gsea_table"))
+          #   )
+          # 
+          
           )
         ),
       

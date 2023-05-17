@@ -235,7 +235,7 @@ partial_bundle(p2)
 
 # Chaffin_ HCM DCM atlas ----------------------------------------------------------------------
 
-sc.gex= read.csv("data/single_geneset.csv")%>% as_tibble()
+sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% as_tibble()
 
 genes=c("NPPA", "NPPB")
 

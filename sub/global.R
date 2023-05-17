@@ -45,9 +45,9 @@ sc.gex= read.csv("data/sc_gex_chaffin.csv")%>%
 ##reheat
 contrasts_HF = readRDS("data/study_contrasts.rds")
 ranks = readRDS("data/study_ranks.rds")
-
 directed_signature = readRDS("data/signature.rds")
 undirected_signature = readRDS("data/fisher_signature.rds")
+
 #overview = readRDS("data/study_overview.rds")
 #progeny = readRDS("data/PROGENy_results.rds")
 #dorothea = readRDS("data/dorothea_results.rds")
@@ -57,3 +57,10 @@ undirected_signature = readRDS("data/fisher_signature.rds")
 
 #example
 example_geneset = read_csv("data/multiple_geneset.csv")
+
+#progeny:
+prog.res= readRDS("data/progeny_results_all.rds")
+
+
+
+

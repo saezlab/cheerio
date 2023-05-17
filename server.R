@@ -446,8 +446,15 @@ output$dorothea_table_hypertrophy = DT::renderDataTable({
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
 })
+# 
+output$progeny_hypertropy_plot = renderPlot({
+  if ("Murine_Hypertrophy" %in% input$contrasts) {
+  
+    p1 =draw(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo) )
+    p1
+  }
 
-
+  })
 
 
 hide("loading-content", TRUE, "fade")  

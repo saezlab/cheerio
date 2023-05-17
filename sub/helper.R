@@ -121,3 +121,49 @@ make_gsea_plot = function(signature, geneset, gene_level_stat) {
   p = plot_grid(p1, p2, ncol=1, align="v", axis="l", rel_heights = c(2,1))
   return(p)
 }
+
+
+
+
+
+#plot full progeny matrix
+plot_hmap= function(prog.matrix, 
+                    title = "",
+                    max.ps= NA,
+                    ct_size= 11){
+  plot.map= t(prog.matrix)
+  
+  require(circlize)
+  if(is.na(max.ps)){
+    col_fun = colorRamp2(c(min(plot.map), 0, max(plot.map)), c("blue", "white", "red"))
+  }else{
+  col_fun = colorRamp2(c(max.ps[1], 0, max.ps[2]), c("blue", "white", "red"))
+  }
+  
+  #col_fun(seq(-3, 3))
+  
+  hmap= Heatmap(plot.map,cluster_rows = T,
+                
+                cluster_columns = F,
+                name = "PROGENy \n score",
+                column_names_rot = 90,
+                column_title_gp = gpar(fontsize = ct_size),
+                border = T,
+                col = col_fun,
+                  
+                
+                row_names_side= "left",
+                #rect_gp = gpar(ol = "black", lty = 1),
+                row_names_gp = gpar(fontsize = 10),
+                column_names_gp = gpar(fontsize = 10),
+                rect_gp = gpar(col = "darkgrey", lty = 1, size= 0.1),
+                show_row_dend = FALSE, 
+                column_title= title, 
+                cell_fun = function(j, i, x, y, w, h, fill) {
+                  if(abs(plot.map[i, j]) > 2) {
+                    grid.text("*", x, y)
+                  }
+                })
+  hmap
+  
+}

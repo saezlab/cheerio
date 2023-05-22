@@ -124,6 +124,20 @@ ui = function(request) {
         icon = icon("chart-line"),
         sidebarPanel(
           includeMarkdown("inst/functional_analysis_sidebar.md"),
+          
+          h3(),
+          p("Choose the contrast to display functional footprinting results"),
+          # radioButtons("select_contrast_func2", "Select contrast", 
+          #              choices = c("murine_hypertrophy", 
+          #                          "human_HF", 
+          #                          "human_fetal")),
+          selectizeInput("select_contrast_func", "Select contrast", 
+                         multiple = F, 
+                         choices = c("murine_hypertrophy", 
+                                     "human_HF",
+                                     "human_HF_sc",
+                                     "human_fetal")),
+          h2(),
           pickerInput(inputId = "select_tf", 
                       label = "Select transcription factor(s)",
                       choices = sort(unique(tf_hypertrophy$source)), 
@@ -132,31 +146,27 @@ ui = function(request) {
                                      size=6, `max-options` = 6),
                       selected = c("Gata4", "Gata3", "Hif1a")
           ),
-          selectizeInput("select_tfcontrast", "Select contrast", 
-                         multiple = F, 
-                         choices = c("murine hypertrophy", 
-                                     "human_HF", 
-                                     "human_fetal"))
+          actionButton("reset_input_TF", "Reset TFs")
+        
         ),
         mainPanel(
-          h3("Estimated TF activity in Murine Cardiac Hypertrophy models"),
-          h5("TF activity"),
-          plotOutput("tf_hypertrophy_plot"),#, width = "100%", height = "600px"),
+          h3("Estimated TF activity"),
+          h5(""),
+          plotOutput("tf_hypertrophy_plot",width = "100%", height = "900px"),
           
-          h3("Pathway activity"),
+          h3("Estimated Pathway activity"),
           plotOutput("progeny_hypertropy_plot"),
-          # 
-          # h3("Access, query and download raw data"),
-          # h5("TF activity"),
-          # tabsetPanel(
-          #   type = "tabs",
-          #   tabPanel("PROGENy", DT::dataTableOutput("progeny_table")),
-          #   tabPanel("DoRothEA",
-          #            DT::dataTableOutput("dorothea_table_hypertrophy")),
-          #   tabPanel("GSEA", DT::dataTableOutput("gsea_table")),
-          #   tabPanel("GSEA to microRNAs", DT::dataTableOutput("mi_gsea_table"))
-          #   )
-          # 
+
+          h3("Access, query and download raw data"),
+          h5(""),
+          tabsetPanel(
+            type = "tabs",
+            tabPanel("DoRothEA",
+                     DT::dataTableOutput("dorothea_table_hypertrophy")),
+            tabPanel("PROGENy", DT::dataTableOutput("progeny_table"))
+            
+            )
+
           
           )
         ),

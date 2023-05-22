@@ -250,7 +250,7 @@ signature = reactive({
   
   ## add statement of 
   switch(input$contrasts_gsea,
-         "directed_HF" = directed_signature,
+         "directed" = directed_signature,
          "undirected" = undirected_signature)
 })
 
@@ -387,25 +387,35 @@ output$human_scDT = DT::renderDataTable({
 
 #### Functional analysis ####
 # progeny
-output$progeny_table = DT::renderDataTable({
-  progeny %>%
-    mutate(progeny_scores = signif(progeny_scores, 3),
-           progeny_pvals = scientific(progeny_pvals),
-           pathway = factor(pathway, levels = sort(pathway))) %>%
-    select(pathway, progeny_scores, progeny_pvals) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+observeEvent(input$reset_input_TF, {
+  updatePickerInput(session,
+                    inputId = "select_tf", selected = character(0)
+  )
+})
+
+# use switch function to update the contrast variable
+contrast_ID = reactive({
+  switch(input$select_contrast_func,
+        # "murine_hypertrophy"= tf_hypertrophy
+         "murine_hypertrophy"= list("TF" =df_tf$mm,
+                                    "prog"= list("rna"= prog.res$mmRNA,
+                                                 "ribo"=prog.res$mmRibo)
+                                    ),
+         "human_HF"= list("prog"= prog.res$hsReheat,
+                          "TF" =df_tf$hs_reheat),
+         "human_HF_sc"= list("prog"= prog.res$hsSC,
+                             "TF" =df_tf$hs_sc),
+         "human_fetal" = list("prog"= prog.res$hsfetal,
+                              "TF" =df_tf$hs_fetal)
+         )
+         
 })
 
 # dorothea
 output$tf_hypertrophy_plot = renderPlot({
-    if (!is.null(input$select_tf) & ("Murine_Hypertrophy" %in% input$contrasts))  {
+    if (!is.null(input$select_tf) & ("murine_hypertrophy" %in% input$select_contrast_func))  {
       pls= map(input$select_tf, function(x){
-        tf_hypertrophy %>% 
+        contrast_ID()$TF%>%
           filter(source ==x)%>%
           mutate(condition= paste(tp, modal,sep =  "_"))%>%
           ggplot(aes(x = condition, y =  score, fill = sig)) +
@@ -416,7 +426,7 @@ output$tf_hypertrophy_plot = renderPlot({
           theme_cowplot() +
           scale_fill_manual(values = c("TRUE" = "darkgreen",
                                        "FALSE"="orange"))+
-          labs(x = "experimental group", y = "TF activity", fill = "p<0.05") +
+          labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
           theme(panel.grid.major = element_line(color = "grey",
                                                 size = 0.1,
                                                 linetype = 1),
@@ -429,17 +439,184 @@ output$tf_hypertrophy_plot = renderPlot({
       })
       p1= cowplot::plot_grid(plotlist =  pls)
       p1
+    }else if(!is.null(input$select_tf) & ("human_HF" %in% input$select_contrast_func))  {
+      pls= map(input$select_tf, function(x){
+        contrast_ID()$TF%>%
+          #df_tf$hs_reheat%>%
+          filter(source ==toupper(x))%>%
+          ggplot(aes(x = study, y =  score, fill = sig)) +
+          #facet_grid(rows= vars(model))+
+          #geom_boxplot()+
+          geom_hline(yintercept = 0, color= "black")+
+          geom_col(width= 0.4, color ="black") +
+          theme_cowplot() +
+          scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                       "FALSE"="orange"))+
+          labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
+          theme(panel.grid.major = element_line(color = "grey",
+                                                size = 0.1,
+                                                linetype = 1),
+                panel.grid.minor = element_blank(),
+                axis.text = element_text(size= 11), 
+                axis.title = element_text(size= 10)) +
+          coord_flip()+
+          ggtitle(x)
+        
+      })
+      p1= cowplot::plot_grid(plotlist =  pls)
+      p1
+    }else if(!is.null(input$select_tf) & ("human_HF_sc" %in% input$select_contrast_func))  {
+      pls= map(input$select_tf, function(x){
+        contrast_ID()$TF%>%
+        #  df_tf$hs_sc%>%
+          filter(source ==toupper(x))%>%
+          ggplot(aes(x = celltype, y = score, fill = sig)) +
+          facet_grid(rows= vars(condition))+
+          geom_hline(yintercept = 0, color= "black")+
+          geom_col(width= 0.4, color ="black") +
+          theme_cowplot() +
+          scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                       "FALSE"="orange"))+
+          labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+          theme(#panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10)) +
+          coord_flip()+
+          ggtitle(x)
+        
+      })
+      p1= cowplot::plot_grid(plotlist =  pls)
+      p1
+    } else if(!is.null(input$select_tf) & ("human_fetal" %in% input$select_contrast_func))  {
+      pls= map(input$select_tf, function(x){
+        contrast_ID()$TF%>%
+          #  df_tf$hs_sc%>%
+          filter(source ==toupper(x))%>%
+          ggplot(aes(x = condition, y = score, fill = sig)) +
+          geom_hline(yintercept = 0, color= "black")+
+          geom_col(width= 0.4, color ="black") +
+          theme_cowplot() +
+          scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                       "FALSE"="orange"))+
+          labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+          theme(#panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10)) +
+          coord_flip()+
+          ggtitle(x)
+        
+      })
+      p1= cowplot::plot_grid(plotlist =  pls)
+      p1
     }
 })
 
+# progeny 
+output$progeny_hypertropy_plot = renderPlot({
+  if (input$select_contrast_func == "murine_hypertrophy") {
+  
+    p1 =(plot_hmap(contrast_ID()$prog$rna)+plot_hmap(contrast_ID()$prog$ribo) )
+    p1
+  }else if( input$select_contrast_func == "human_HF"){
+    p1 =plot_hmap(contrast_ID()$prog)
+    p1
+  }else if( input$select_contrast_func == "human_HF_sc"){
+    sc.df.prg = contrast_ID()$prog
+    sc.hmaps= lapply(names(sc.df.prg), function(x){
+      plot_hmap(sc.df.prg[[x]], x,
+                max.ps = c(min(sapply(sc.df.prg, min)),
+                           max(sapply(sc.df.prg, max)))
+      )
+    })
+    names(sc.hmaps)= names(sc.df.prg)
+    p1= eval(parse(text= paste(paste0("sc.hmaps$",paste0("`", names(sc.hmaps), "`")),  collapse = " + ")))
+    #p1 =plot_hmap(contrast_ID()$prog$reheat)
+    p1
+  }else if( input$select_contrast_func == "human_fetal"){
+    p1 =plot_hmap(contrast_ID()$prog)
+    p1
+  }
+
+  })
+
+output$progeny_table = DT::renderDataTable({
+  if (input$select_contrast_func == "murine_hypertrophy") {
+     lapply(names(contrast_ID()$prog), function(x){
+    #df= lapply(names(test), function(x){
+      contrast_ID()$prog[[x]]%>% 
+      as.data.frame()%>%
+      rownames_to_column("contrast")%>%
+      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>% 
+        mutate(sig= ifelse(abs(score)>2, T, F),
+               score = signif(score, 3))
+      })%>% do.call(rbind, .)%>%
+      mutate(modal = factor(ifelse(grepl("rna", contrast), "rna", "ribo")),
+             model = factor(ifelse(grepl("tac", contrast), "tac", "swim")),
+             tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
+             pathway= factor(pathway))%>%
+      select(-contrast, )%>%
+      DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T, 
+                                autoWidth = T, 
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+  }else  if (input$select_contrast_func == "human_HF_sc") {
+    df= lapply(names(contrast_ID()$prog), function(x){
+      contrast_ID()$prog[[x]] %>%
+        as.data.frame()%>%
+        rownames_to_column("contrast")%>%
+        pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+        mutate(celltype= factor(x),
+               pathway= factor(pathway), 
+               contrast= factor(contrast), 
+               sig= factor(sig)
+               )
+    })%>% do.call(rbind, .)
+    df%>%
+      #prog.res$hsReheat%>%
+      as.data.frame()%>%
+      mutate_if(is.character, as.factor) %>% 
+      mutate(sig= factor(ifelse(abs(score)>2, T, F)),
+             score = signif(score, 3))%>%
+      DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                    extensions = "Buttons", rownames = F,
+                    option = list(scrollX = T, 
+                                  autoWidth = T, 
+                                  dom = "Bfrtip",
+                                  buttons = c("copy", "csv", "excel")))
+  }else{
+  #contrast_ID()$prog%>%
+    prog.res$hsfetal%>%
+    as.data.frame()%>%
+    rownames_to_column("contrast")%>%
+      mutate_if(is.character, as.factor) %>% 
+    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+    mutate(sig= ifelse(abs(score)>2, T, F),
+           score = signif(score, 3))%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T, 
+                                autoWidth = T, 
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+    
+  }
+})
+
 output$dorothea_table_hypertrophy = DT::renderDataTable({
-  tf_hypertrophy %>%
-    select(-statistic)%>%
+  contrast_ID()$TF %>%
+  #  df_tf$mm%>%
+    dplyr::select(-statistic)%>%
+    mutate_if(is.character, as.factor) %>% 
     mutate(score = signif(score, 3),
-           p_value = scientific(p_value)) %>%
+           p_value = scientific(p_value), 
+           ) %>%
     #adj_pvalue = scientific(adj_pvalue),
     #source = factor(source, levels = sort(source))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
                                 autoWidth = T, 
@@ -447,14 +624,6 @@ output$dorothea_table_hypertrophy = DT::renderDataTable({
                                 buttons = c("copy", "csv", "excel")))
 })
 # 
-output$progeny_hypertropy_plot = renderPlot({
-  if ("Murine_Hypertrophy" %in% input$contrasts) {
-  
-    p1 =draw(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo) )
-    p1
-  }
-
-  })
 
 
 hide("loading-content", TRUE, "fade")  

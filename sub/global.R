@@ -23,6 +23,7 @@ library(readr)
 library(stringr)
 library(cowplot)
 library(shinycssloaders)
+library(ComplexHeatmap)
 #install.packages(c("shinytest", "showimage", "webdriver"))
 theme_set(theme_cowplot())
 
@@ -34,6 +35,7 @@ theme_set(theme_cowplot())
 ##hypertrophy mice
 contrasts = readRDS("data/contrasts.hypertrophy.rds")
 tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
+df_tf= readRDS("data/dorothea_results_all.rds")
 
 #sc chaffin dcm, hcm
 sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
@@ -60,6 +62,8 @@ example_geneset = read_csv("data/multiple_geneset.csv")
 
 #progeny:
 prog.res= readRDS("data/progeny_results_all.rds")
+#dorothea:
+df_tf= readRDS("data/dorothea_results_all.rds")
 
 
 

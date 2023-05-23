@@ -167,3 +167,62 @@ plot_hmap= function(prog.matrix,
   hmap
   
 }
+
+
+
+## contrast query function: 
+get_top_consistent_gene<-
+  function(joint_contrast_df,
+           query_contrasts= c("tac_ribo_2wk", "fetal_rna_fetal1", "HCMvsNF_Fibroblast"), 
+           alpha= 0.05, 
+           cutoff= 15){
+    
+    
+    contrast_df_filt= joint_contrast_df %>% 
+      filter(contrast_id %in% query_contrasts)%>%
+      filter(FDR< alpha)
+    
+    venn= table(contrast_df_filt$gene)
+    p.hist= enframe(venn) %>% ggplot(., aes(x= factor(value)))+
+      geom_histogram(stat="count")+
+      labs(x= "number of contrasts reporting gene")
+    
+    intersect_genes= names(venn[venn == length(query_contrasts)])
+    
+    # calculate the median normalized rank across contrasts
+      df.median= joint_contrast_df %>%
+        filter(contrast_id %in% query_contrasts,
+               gene %in% intersect_genes)%>% 
+        group_by(gene)%>%
+        summarise(m.r= mean(ranks3))
+      
+      df.full= df.median %>%
+        arrange(desc(m.r)) %>%
+        left_join(contrast_df_filt%>%
+                    select(gene, logFC, FDR, contrast_id), by= "gene")
+      
+    if(length(intersect_genes)!= 0){
+      top_dn= df.median%>% arrange(desc(m.r))%>% slice(1:cutoff)%>% pull(gene)
+      top_up= df.median%>% arrange(m.r)%>% slice(1:cutoff)%>% pull(gene)
+      
+        p.top_genes= 
+          ggplot(df.full %>% 
+                   filter(gene %in% c(top_dn, top_up))%>% 
+                   mutate(gene= factor(gene, levels= c(top_dn, top_up))), 
+                 aes(x= gene, y= logFC))+
+          geom_boxplot(outlier.colour = NA)+
+          geom_jitter(aes( color= contrast_id))+
+          theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
+          geom_hline(yintercept = 0)
+        
+    }else{ 
+      p.top_genes= NULL
+      
+    }
+    
+    return(list(p.hist=p.hist, 
+                genes= intersect_genes, 
+                df= df.full, 
+                p.top_genes= p.top_genes
+    ))
+  }

@@ -18,7 +18,7 @@ library(ggplot2)
 library(cowplot)
 library(tidyr)
 #library(fgsea)
-#library(decoupleR)
+library(decoupleR)
 library(readr)
 library(stringr)
 library(cowplot)
@@ -27,7 +27,6 @@ library(ComplexHeatmap)
 #install.packages(c("shinytest", "showimage", "webdriver"))
 theme_set(theme_cowplot())
 
-# options(repos = BiocManager::repositories())
 
 # load static data
 
@@ -64,6 +63,10 @@ example_geneset = read_csv("data/multiple_geneset.csv")
 prog.res= readRDS("data/progeny_results_all.rds")
 #dorothea:
 df_tf= readRDS("data/dorothea_results_all.rds")
+
+
+#contrast query:
+joint_contrast_df= readRDS( "data/contrasts_query_df.rds")
 
 
 

@@ -35,7 +35,7 @@ ui = function(request) {
                       choices = sort(unique(contrasts$MgiSymbol)), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=6, `max-options` = 6),
+                                     size=10, `max-options` = 10),
                       selected = c("Nppb", "Nppa", "Postn", "Col1a1", "Myh7", "Myh6" ) 
                       ),
           
@@ -80,43 +80,57 @@ ui = function(request) {
         )
       ),
       
-      #### Input data ####
-      tabPanel(
-        title = "Enrichment analysis",
-        icon = icon("file-upload"),
-        sidebarPanel(
-          includeMarkdown("inst/input_data_sidebar.md"),
-          h5("Use example data?"),
-          switchInput(inputId = "take_example_data",
-                      onLabel = "Yes", offLabel = "No", value=F), 
-          p("Gene sets must be uploaded as .csv file. The gene set members must 
-             be stored in column named 'gene'. In case of multiple gene sets a 
-             second column named 'geneset' must be added containing the gene set 
-             name/identifier."),
-          fileInput("user_input", label="Upload gene sets (.csv)"),
-          checkboxGroupInput(inputId= "contrasts_gsea", label= "Select contrasts to perform enrichment on", 
-                             selected = c("Murine_Hypertrophy"),
-                             inline = FALSE, width = NULL, 
-                             choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
-                             choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" )),
-          
-          p("Choose whether you would like to test your gene set agains a 
-             directed or undirected signature."),
-          radioButtons("signature_source", "Signature", 
-                       choices = c("directed", "undirected")),
-          p("GSEA will be performed upon clicking the submit button."),
-          actionButton("submit", label="Submit",
-                       icon=icon("send")) 
-          ),
-        mainPanel(
-          h4("GSEA result"),
-          DT::dataTableOutput("gsea_res_table"),
-          hr(),
-          h4("GSEA plots"),
-          plotOutput("gsea_res_plots", width = "100%", height = "600px") %>%
-            withSpinner()
-        )
-      ),
+      
+
+# Query contrasts -----------------------------------------------------------------------------
+tabPanel(
+  title = "Query contrasts",
+  icon = icon("search"),
+  sidebarPanel(
+    includeMarkdown("inst/query_contrasts_sidebar.md"),
+    pickerInput(inputId = "select_contrast", 
+                label = "Select contrasts",
+                choices = sort(unique(joint_contrast_df$contrast_id)), 
+                multiple = T,
+                options = list(`live-search` = TRUE,
+                               size=10, `max-options` = 10),
+                selected = c("tac_ribo_2wk", "fetal_rna_fetal1", "HCMvsNF_Fibroblast") 
+    ),
+    
+    actionButton("reset_input_contrasts", "Reset contrasts"),
+    
+    sliderInput("cut_off_genes", "Cut off top genes:",
+                min = 1, max = 30,
+                value = 10, step= 1),
+    
+    pickerInput(inputId = "select_alpha", 
+                label = "Select alpha for FDR cut off",
+                choices = c(0.0001, 0.001, 0.01, 0.05, 0.1), 
+                multiple = F,
+                options = list(`live-search` = TRUE,
+                               size=10, `max-options` = 10),
+                selected = 0.05
+    ),
+    
+    p("Contrast comparison performed clicking the submit button."),
+    actionButton("submit_contrast", label="Submit",
+                 icon=icon("send")) 
+  ),
+  mainPanel(
+    h3("Search for consistent genes"),
+    h5("Hist"),
+    plotOutput("cq_hist"),
+    
+    h5("Top hits"),
+    plotOutput("cq_top"),
+    
+    h5("table"),
+    DT::dataTableOutput("cq_table")
+    )
+    
+  
+),
+
       
       #### Functional analysis ####
       tabPanel(
@@ -171,6 +185,45 @@ ui = function(request) {
           )
         ),
       
+      
+      #### Input data ####
+      tabPanel(
+        title = "Enrichment analysis",
+        icon = icon("file-upload"),
+        sidebarPanel(
+          includeMarkdown("inst/input_data_sidebar.md"),
+          h5("Use example data?"),
+          switchInput(inputId = "take_example_data",
+                      onLabel = "Yes", offLabel = "No", value=F), 
+          p("Gene sets must be uploaded as .csv file. The gene set members must 
+             be stored in column named 'gene'. In case of multiple gene sets a 
+             second column named 'geneset' must be added containing the gene set 
+             name/identifier."),
+          fileInput("user_input", label="Upload gene sets (.csv)"),
+          checkboxGroupInput(inputId= "contrasts_gsea", label= "Select contrasts to perform enrichment on", 
+                             selected = c("Murine_Hypertrophy"),
+                             inline = FALSE, width = NULL, 
+                             choiceNames = c("Murine Hypertrophy" , "Human heart failure bulk", 
+                                             "Human heart failure sc", "Human fetal" ),
+                             choiceValues = c("murine_hypertrophy" , "human_HF","human_HF_sc",  "fetal" )),
+          
+          p("Choose whether you would like to test your gene set agains a 
+             directed or undirected signature."),
+          radioButtons("signature_source", "Signature", 
+                       choices = c("directed", "undirected")),
+          p("GSEA will be performed upon clicking the submit button."),
+          actionButton("submit", label="Submit",
+                       icon=icon("send")) 
+          ),
+        mainPanel(
+          h4("GSEA result"),
+          DT::dataTableOutput("gsea_res_table"),
+          hr(),
+          h4("GSEA plots"),
+          plotOutput("gsea_res_plots", width = "100%", height = "600px") %>%
+            withSpinner()
+        )
+      ),
       
       #### Download Center ####
       tabPanel(

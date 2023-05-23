@@ -203,7 +203,7 @@ output$fetal_gene_expression_plots = renderPlot({
   }
 })
 
-## remove input button:
+## reset the gene input button:
 observeEvent(input$reset_input, {
   updatePickerInput(session,
                     inputId = "select_gene", selected = character(0)
@@ -212,178 +212,43 @@ observeEvent(input$reset_input, {
 })
 
 
-# # subsetted dataframe of meta analysis
-# output$summary_sub = DT::renderDataTable({
-#   if (!is.null(input$select_gene)) {
-#     ranks %>%
-#       filter(gene %in% input$select_gene) %>%
-#       mutate(mean_lfc = signif(mean_lfc,3),
-#              mean_t = signif(mean_t,3),
-#              fisher_pvalue = scientific(fisher_pvalue)) %>%
-#       DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-#                     extensions = "Buttons", rownames = F,
-#                     option = list(scrollX = T, 
-#                                   autoWidth = T, 
-#                                   dom = "Bfrtip",
-#                                   buttons = c("copy", "csv", "excel")))
-#   }
-# })
-
-#### Input data ####
-# load user input (gene sets)
-gs = reactive({
-  if (input$take_example_data == F) {
-    shinyjs::enable("user_input")
-    inFile = input$user_input
-    if (is.null(inFile)){
-      return(NULL)
-    }
-    read_csv(inFile$datapath)
-  } else {
-    shinyjs::disable("user_input")
-    example_geneset
-  }
+#### Contrast query ------------------------------------------------------------------------------
+observeEvent(input$reset_input_contrasts, {
+  updatePickerInput(session,
+                    inputId = "select_contrast", selected = character(0)
+  )
 })
-
-# get which signature should be used (directed vs undirected)
-signature = reactive({
-  
-  ## add statement of 
-  switch(input$contrasts_gsea,
-         "directed" = directed_signature,
-         "undirected" = undirected_signature)
-})
-
-# perform GSEA with plotting
-gsea_res = eventReactive(input$submit, {
-  if (ncol(gs()) == 1) {
-    res = fgsea(list(geneset = gs()$gene), deframe(signature()), nperm = 1000)
-    p = make_gsea_plot(signature(), gs(), weight)
-  } else if (ncol(gs()) == 2) {
-    list_gs = gs() %>%
-      split(.$geneset) %>%
-      map(pull, gene)
-    res = fgsea(list_gs, deframe(signature()), nperm = 1000)
-    
-    plot_df = gs() %>%
-      nest(set = gene) %>%
-      mutate(plot = pmap(., .f = function(geneset, set, ...) {
-        make_gsea_plot(signature(), set, weight)
-      }))
-    
-    p = plot_grid(plotlist = plot_df$plot, labels = plot_df$geneset)
-  }
-  
-  df = res %>% 
-    rename(geneset = pathway) %>%
-    as_tibble() %>%
-    select(-leadingEdge) %>%
-    mutate(signature = input$signature_source)
-  
-  list(df = df, p = p)
-})
-
-# gsea results as table
-output$gsea_res_table = DT::renderDataTable({
-  gsea_res()$df %>%
-    mutate(NES = signif(NES, 3),
-           ES = signif(ES, 3),
-           pval = scientific(pval),
-           padj = scientific(padj)) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-# gsea results as plots
-output$gsea_res_plots = renderPlot({
-  gsea_res()$p
+cont_res = eventReactive(input$submit_contrast, {
+  res= get_top_consistent_gene(joint_contrast_df = joint_contrast_df, 
+                          query_contrasts = input$select_contrast,
+                          cutoff = input$cut_off_genes,
+                          alpha= as.numeric(input$select_alpha)
+                          
+                          )
+  return(res)
 })
 
 
-####Download center ####
-
-# make gene contrast data accessible:
-output$mouse_hypertrophyDT = DT::renderDataTable({
-  contrasts %>%
-    select(modal, model, tp, MgiSymbol, logFC, FDR)%>%
-    filter(!grepl("fetal", tp))%>%
-    mutate(logFC = signif(logFC,3),
-           FDR = scientific(FDR),
-           model = as_factor(model),
-           modal = as_factor(modal),
-           tp = as_factor(tp)) %>%
-    DT::datatable(escape=F, filter = "top", selection = "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-
+output$cq_hist= renderPlot({
+  cont_res()$p.hist
 })
 
-output$human_HF_bulk_indDT = DT::renderDataTable({
-  contrasts_HF %>%
-    mutate(AveExpr = signif(AveExpr,3),
-           logFC = signif(logFC,3),
-           t = signif(t,3),
-           B = signif(B,3),
-           P.Value = scientific(P.Value),
-           adj.P.Val = scientific(adj.P.Val),
-           study = as_factor(study)) %>%
-    DT::datatable(escape=F, filter = "top", selection =  "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+output$cq_top=renderPlot({
+  cont_res()$p.top_genes
 })
 
-output$human_HF_bulk_summDT = DT::renderDataTable({
-  ranks %>%
-    mutate(mean_lfc = signif(mean_lfc,3),
-           mean_t = signif(mean_t,3),
-           fisher_pvalue = scientific(fisher_pvalue)) %>%
-    DT::datatable(escape=F, filter = "top", selection = "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-  })
 
-output$human_fetalDT = DT::renderDataTable({
-  contrasts %>%
-    select(tp, MgiSymbol, logFC, FDR)%>%
-    filter(grepl("fetal", tp))%>%
-    mutate(logFC = signif(logFC,3),
-           FDR = scientific(FDR),
-           #model = as_factor(model),
-           #modal = as_factor(modal),
-           tp = as_factor(tp)) %>%
-    rename(fetal_study= tp)%>%
-    DT::datatable(escape=F, filter = "top", selection = "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+output$cq_table= DT::renderDataTable({
+ cont_res()$df %>% 
+   DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                extensions = "Buttons", rownames = F,
+                option = list(scrollX = T, 
+                              autoWidth = T, 
+                              dom = "Bfrtip",
+                              buttons = c("copy", "csv", "excel")))
 })
 
-output$human_scDT = DT::renderDataTable({
-  sc.gex %>%
-    mutate(Comparison= factor(Comparison),
-           CellType= factor(CellType)) %>%
-    DT::datatable(escape=F, filter = "top", selection = "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
+
 
 #### Functional analysis ####
 # progeny
@@ -556,14 +421,14 @@ output$progeny_table = DT::renderDataTable({
              model = factor(ifelse(grepl("tac", contrast), "tac", "swim")),
              tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
              pathway= factor(pathway))%>%
-      select(-contrast, )%>%
+      select(-contrast)%>%
       DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
                                 autoWidth = T, 
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
-  }else  if (input$select_contrast_func == "human_HF_sc") {
+  }else if (input$select_contrast_func == "human_HF_sc") {
     df= lapply(names(contrast_ID()$prog), function(x){
       contrast_ID()$prog[[x]] %>%
         as.data.frame()%>%
@@ -572,7 +437,7 @@ output$progeny_table = DT::renderDataTable({
         mutate(celltype= factor(x),
                pathway= factor(pathway), 
                contrast= factor(contrast), 
-               sig= factor(sig)
+               #sig= factor(sig)
                )
     })%>% do.call(rbind, .)
     df%>%
@@ -627,6 +492,174 @@ output$dorothea_table_hypertrophy = DT::renderDataTable({
 
 
 hide("loading-content", TRUE, "fade")  
+
+
+#### Custom Enrichment ####
+# load user input (gene sets)
+gs = reactive({
+  if (input$take_example_data == F) {
+    shinyjs::enable("user_input")
+    inFile = input$user_input
+    if (is.null(inFile)){
+      return(NULL)
+    }
+    read_csv(inFile$datapath)
+  } else {
+    shinyjs::disable("user_input")
+    example_geneset
+  }
+})
+
+contrast_enrich= reactive({
+  switch(input$contrasts_gsea,
+         "directed" = directed_signature,
+         "undirected" = undirected_signature)
+})
+# get which signature should be used (directed vs undirected)
+signature = reactive({
+  switch(input$signature_source,
+         "murine_hypertrophy" = contrasts %>% filter(model!= fetal),
+         "human_HF" = directed_signature,
+         "human_HF_sc"= sc.gex,  
+         "fetal"= contrasts %>% filter(model=="fetal")
+         )
+})
+
+# perform GSEA with plotting
+gsea_res = eventReactive(input$submit, {
+  if (ncol(gs()) == 1) {
+    
+    
+    
+    res = fgsea(list(geneset = gs()$gene), deframe(signature()), nperm = 1000)
+    p = make_gsea_plot(signature(), gs(), weight)
+  } else if (ncol(gs()) == 2) {
+    list_gs = gs() %>%
+      split(.$geneset) %>%
+      map(pull, gene)
+    res = fgsea(list_gs, deframe(signature()), nperm = 1000)
+    
+    plot_df = gs() %>%
+      nest(set = gene) %>%
+      mutate(plot = pmap(., .f = function(geneset, set, ...) {
+        make_gsea_plot(signature(), set, weight)
+      }))
+    
+    p = plot_grid(plotlist = plot_df$plot, labels = plot_df$geneset)
+  }
+  
+  df = res %>% 
+    rename(geneset = pathway) %>%
+    as_tibble() %>%
+    select(-leadingEdge) %>%
+    mutate(signature = input$signature_source)
+  
+  list(df = df, p = p)
+})
+
+# gsea results as table
+output$gsea_res_table = DT::renderDataTable({
+  gsea_res()$df %>%
+    mutate(NES = signif(NES, 3),
+           ES = signif(ES, 3),
+           pval = scientific(pval),
+           padj = scientific(padj)) %>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T, 
+                                autoWidth = T, 
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
+# gsea results as plots
+output$gsea_res_plots = renderPlot({
+  gsea_res()$p
+})
+
+
+
+####Download center ####
+
+# make gene contrast data accessible:
+output$mouse_hypertrophyDT = DT::renderDataTable({
+  contrasts %>%
+    select(modal, model, tp, MgiSymbol, logFC, FDR)%>%
+    filter(!grepl("fetal", tp))%>%
+    mutate(logFC = signif(logFC,3),
+           FDR = scientific(FDR),
+           model = as_factor(model),
+           modal = as_factor(modal),
+           tp = as_factor(tp)) %>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+
+})
+
+output$human_HF_bulk_indDT = DT::renderDataTable({
+  contrasts_HF %>%
+    mutate(AveExpr = signif(AveExpr,3),
+           logFC = signif(logFC,3),
+           t = signif(t,3),
+           B = signif(B,3),
+           P.Value = scientific(P.Value),
+           adj.P.Val = scientific(adj.P.Val),
+           study = as_factor(study)) %>%
+    DT::datatable(escape=F, filter = "top", selection =  "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
+output$human_HF_bulk_summDT = DT::renderDataTable({
+  ranks %>%
+    mutate(mean_lfc = signif(mean_lfc,3),
+           mean_t = signif(mean_t,3),
+           fisher_pvalue = scientific(fisher_pvalue)) %>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+  })
+
+output$human_fetalDT = DT::renderDataTable({
+  contrasts %>%
+    select(tp, MgiSymbol, logFC, FDR)%>%
+    filter(grepl("fetal", tp))%>%
+    mutate(logFC = signif(logFC,3),
+           FDR = scientific(FDR),
+           #model = as_factor(model),
+           #modal = as_factor(modal),
+           tp = as_factor(tp)) %>%
+    rename(fetal_study= tp)%>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
+output$human_scDT = DT::renderDataTable({
+  sc.gex %>%
+    mutate(Comparison= factor(Comparison),
+           CellType= factor(CellType)) %>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
 
 }
 

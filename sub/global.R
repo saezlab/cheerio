@@ -1,6 +1,8 @@
 library(BiocManager)
 options(repos = BiocManager::repositories())
 
+library(RColorBrewer)
+library(eulerr)
 library(shiny)
 library(shinyWidgets)
 library(shinyhelper)

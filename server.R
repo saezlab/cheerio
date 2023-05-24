@@ -24,8 +24,9 @@ output$gene_expression_plots = renderPlot({
         theme(panel.grid.major = element_line(color = "grey",
                                               size = 0.1,
                                               linetype = 1),
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size= 11), 
+              panel.border = element_rect(fill= NA, size=1, color= "black"), 
+              panel.grid.minor = element_blank(),
+              axis.text = element_text(size= 11), 
           axis.title = element_text(size= 10)) +
         coord_flip()+
         ggtitle(x)
@@ -40,27 +41,45 @@ output$gene_expression_plots = renderPlot({
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts)){
     
-    p1= contrasts %>%
+    plot.df= contrasts %>%
       filter(model!= "fetal")%>%
       select(-PValue, -FDR)%>%
       pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
-      mutate(labels= ifelse(MgiSymbol %in% input$select_gene, MgiSymbol, ""),
-             labls= factor(labels, levels= c("", input$select_gene)),
-             alphas= factor(ifelse(labels=="", "bg","normal"))
-             )%>%
-      ggplot(aes(x= rna, y= ribo, color = labels,size= alphas, alpha= alphas))+
-      facet_grid(rows= vars(model), 
-                 cols= vars(tp))+
-      geom_point(show.legend = T)+
-      scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1))+
-      scale_size_manual(values=c("bg"= 0.5, "normal"= 2))+
-      #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
-      theme(panel.grid.major = element_line(color = "grey",
-                                            size = 0.1,
-                                            linetype = 1))+
-      labs(alpha= "")
+      mutate(labels= ifelse(MgiSymbol %in% input$select_gene, MgiSymbol, "background"),
+             labels= factor(labels, levels= c(input$select_gene, "background")),
+             alphas= factor(ifelse(labels=="background", "bg","normal"))
+      )%>%
+      arrange(desc(labels))
     
-    p1
+      if(length(input$select_gene)==2){
+        myColors <- c("green", "blue", "grey")
+      }else if(length(input$select_gene)==1){
+        myColors <- c("green", "grey")
+      }else{
+        myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
+      }
+      names(myColors) <- levels(plot.df$labels)
+      
+      
+      p1= plot.df %>% 
+        ggplot(aes(x= rna, y= ribo, color = labels, size= alphas, alpha= alphas))+
+        facet_grid(rows= vars(model), 
+                   cols= vars(tp))+
+        geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
+        geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
+        geom_point(show.legend = T)+
+        scale_colour_manual("genes", values= myColors)+
+        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+        scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
+        #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
+        theme(panel.grid.major = element_line(color = "grey",
+                                              size = 0.1,
+                                              linetype = 1))+
+        labs(alpha= "")+
+        xlab("logFC - transcriptome")+
+        ylab("logFC - translatome")
+      p1
   }
 })
 
@@ -146,16 +165,20 @@ output$HF_single = renderPlot({
   if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
     pls= map(input$select_gene, function(x){
       sc.gex %>% 
+        mutate(CellType= factor(CellType, levels= unique(sc.gex$CellType)),
+               Comparison = factor(Comparison, levels= c( "HCMvs\nNF", "DCMvs\nNF", "DCMvs\nHCM")))%>%
         filter(Gene==toupper(x))%>%
         # mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
         #        Comparison = factor(Comparison, levels= c("DCMvsNF", "HCMvsNF", "DCMvsHCM")))%>%
         ggplot(aes(x = CellType, y = logFC, fill = Significant)) +
         facet_grid(rows= vars(Comparison))+
         geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black") +
+        geom_col(width= 0.4, color ="black",drop=FALSE)+
+        scale_x_discrete(drop=FALSE)+
         theme_cowplot() +
         scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"))+
+                                     "FALSE"="orange"), 
+                          drop= FALSE)+
         labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
         theme(#panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -212,12 +235,13 @@ observeEvent(input$reset_input, {
 })
 
 
-#### Contrast query ------------------------------------------------------------------------------
+### Contrast query ------------------------------------------------------------------------------
 observeEvent(input$reset_input_contrasts, {
   updatePickerInput(session,
                     inputId = "select_contrast", selected = character(0)
   )
 })
+
 cont_res = eventReactive(input$submit_contrast, {
   res= get_top_consistent_gene(joint_contrast_df = joint_contrast_df, 
                           query_contrasts = input$select_contrast,
@@ -238,9 +262,17 @@ output$cq_top=renderPlot({
 })
 
 
-output$cq_table= DT::renderDataTable({
+output$cq_table_up= DT::renderDataTable({
  cont_res()$df %>% 
-   DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+    filter(gene %in% cont_res()$genes$u)%>%
+    group_by(gene)%>%
+    mutate(mean_logFC= mean(logFC),
+           mean_logFC= signif(mean_logFC, 3),
+           m.r= signif(m.r, 3))%>%
+    rename(mean_rank= m.r)%>%
+    distinct(gene, mean_rank, mean_logFC)%>%
+    arrange((mean_rank))%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                 extensions = "Buttons", rownames = F,
                 option = list(scrollX = T, 
                               autoWidth = T, 
@@ -249,7 +281,36 @@ output$cq_table= DT::renderDataTable({
 })
 
 
+output$cq_table_dn= DT::renderDataTable({
+  cont_res()$df %>% 
+    filter(gene %in% cont_res()$genes$d)%>%
+    group_by(gene)%>%
+    mutate(mean_logFC= mean(logFC),
+           mean_logFC= signif(mean_logFC, 3),
+           m.r= signif(m.r, 3))%>%
+    rename(mean_rank= m.r)%>%
+    distinct(gene, mean_rank, mean_logFC)%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T, 
+                                autoWidth = T, 
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
 
+output$cq_table_full= DT::renderDataTable({
+  cont_res()$df %>% 
+    rename(mean_rank= m.r)%>%
+    mutate(logFC= signif(logFC, 3),
+           mean_rank= signif(mean_rank, 3),
+           FDR = scientific(FDR))%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T, 
+                                autoWidth = T, 
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
 #### Functional analysis ####
 # progeny
 observeEvent(input$reset_input_TF, {

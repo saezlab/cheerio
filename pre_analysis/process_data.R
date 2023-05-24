@@ -3,8 +3,6 @@ setwd(dir = "~/R-projects/Collaborations/shiny_hypertophy/")
 library(tidyverse)
 
 # mouse_hypertrophy data ----------------------------------------------------------------------
-
-
 obj.list =
   list("TAC"= 
          list("RNA"= 
@@ -210,25 +208,48 @@ cowplot::plot_grid(plotlist = pls)
 
 
 ## plot the correlation between ribo and rna
-
-p1= contrasts %>%
+plot.df= contrasts %>%
   filter(model!= "fetal")%>%
   select(-PValue, -FDR)%>%
   pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
-  mutate(labels= ifelse(MgiSymbol %in% genes, MgiSymbol, ""))%>%
-  ggplot(aes(x= rna, y= ribo, color = labels))+
+  mutate(labels= ifelse(MgiSymbol %in% genes, MgiSymbol, "background"),
+         labels= factor(labels, levels= c(genes, "background")),
+         #labls= factor(labels, levels= c("", genes)),
+         alphas= factor(ifelse(labels=="background", "bg","normal"))
+  )%>%
+  arrange(desc(labels))
+
+
+  #prepare color palette:
+
+  if(length(genes)==2){
+    myColors <- c("green", "blue", "grey")
+  }else if(length(genes)==1){
+    myColors <- c("green", "grey")
+  }else{
+    myColors <- c(brewer.pal(length(genes), "Spectral"), "grey")
+  }
+  names(myColors) <- levels(plot.df$labels)
+  
+  p1= plot.df %>% 
+  ggplot(aes(x= rna, y= ribo, color = labels, size= alphas, alpha= alphas))+
   facet_grid(rows= vars(model), 
              cols= vars(tp))+
+  geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
+  geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
   geom_point(show.legend = T)+
+  scale_colour_manual("genes", values= myColors)+
+  geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+  scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+  scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
   #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
   theme(panel.grid.major = element_line(color = "grey",
-                                          size = 0.1,
-                                          linetype = 1))
-
+                                        size = 0.1,
+                                        linetype = 1))+
+  labs(alpha= "")+
+  xlab("logFC - transcriptome")+
+  ylab("logFC - translatome")
 p1
-p2= ggplotly(p1, tooltip = c("MgiSymbol"))
-toWebGL(p2)
-partial_bundle(p2)
 
 
 

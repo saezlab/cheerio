@@ -8,8 +8,8 @@ and provide all genes from all contrasts in a table to be explored. We also plot
 You have to select
 
 - **Contrast**, please see our data overview. 
-- **cut off alpha ** desired significance level for each individual contrast
-- **cut off genes plot** Select how many genes you want to plot. 
+- **Cut off alpha** desired significance level for each individual contrast
+- **Cut off genes plot** Select how many genes you want to plot. 
 
 
 

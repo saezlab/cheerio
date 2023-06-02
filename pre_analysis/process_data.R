@@ -86,11 +86,11 @@ contrasts= lapply(obj.list, function(mod){
 
 ## add fetal expression data:
 fetal1= readRDS(file = "data/fetalDEgenes_GSE52601.rds") %>% 
-  mutate(tp= "fetal2", 
+  mutate(tp= "Hs_fetal_Akat14", 
          modal= "rna",
          model ="fetal") 
 fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>% 
-  mutate(tp= "fetal1", 
+  mutate(tp= "Hs_fetal_Spurell22", 
          modal= "rna",
          model ="fetal") 
 
@@ -105,8 +105,17 @@ rbind(fetal1, fetal2)%>%
 
 contrasts= rbind(fetal.df, contrasts)
 
+
+## add Pe
+
+
+
+## save
 saveRDS(obj.list, "data/GEX.list.hypertrophy.rds")
 saveRDS(contrasts, "data/contrasts.hypertrophy.rds")
+
+
+contrasts
 
 
 
@@ -284,3 +293,97 @@ pls= map(genes, function(x){
 
 cowplot::plot_grid(plotlist = pls)
 unique(sc.gex$Significant)
+
+
+# explore PE in vitro -------------------------------------------------------------------------
+
+df= readxl::read_excel("data/raw_data/invitro_PE/ribo_seq_nrvm_online_merged.xlsx")
+
+df= read_csv("data/raw_data/invitro_PE/ribo_seq_nrvm_online_merged.csv")
+
+df %>% mutate_all( as.integer)
+
+df= df %>% as.data.frame()%>% column_to_rownames("EnsemblGenes"
+)
+
+dge<- DGEList(counts=df)#, group=group)
+
+#detect and remove low expressed gene
+keep <- filterByExpr(dge, min.count	= 5, min.total.count= 10, min.prop = 0.5)
+table(keep)
+?filterByExpr
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+
+dge <- calcNormFactors(dge)
+
+# use limma voom to transform count data to log2 counts per million
+v <- voom(dge, plot=TRUE)
+boxplot(df)
+
+boxplot(v$E)
+
+PCA <- prcomp(t(v$E[,]) ,center = TRUE, scale. = F)
+
+x= cor(v$E)
+pheatmap::pheatmap(x)
+plot.pca = PCA$x %>%
+  as.data.frame %>%
+  rownames_to_column("Run") 
+p.pca = ggplot(plot.pca,aes(x= PC1, y= PC2))+
+  geom_point(size= 3)+
+  theme_minimal()+
+  labs(x= paste0("PC1 (",as.character(round(PCA$sdev[1]^2/sum(PCA$sdev^2)*100)),"%)"),
+       y= paste("PC2 (",as.character(round(PCA$sdev[2]^2/sum(PCA$sdev^2)*100)),"%)"))+
+  ggtitle(paste0(""))
+
+p.pca
+
+
+##
+
+#annotate rat and mgi
+library(biomaRt)
+
+
+x1= read_csv("raw_data/invitro_PE/Ribo_DEG_CPM10_NRVM_online.csv")
+x2= read_csv("raw_data/invitro_PE/RNA_DEG_CPM10_NRVM_online.csv")
+
+
+rat_genes = unique(c(x1$Ensemble_ID, x2$Ensemble_ID_RNA))
+
+#translate gene ID to symbol
+ensembl <- useMart("ensembl", dataset="rnorvegicus_gene_ensembl")
+
+listFilters(ensembl)
+
+foo <- getBM(attributes=c('ensembl_gene_id',
+                          'external_gene_name'),
+             #'mgi_symbol')
+             filters = 'ensembl_gene_id',
+             values = rat_genes,
+             mart = ensembl)
+
+
+x1= x1 %>%
+  rename(ensembl_gene_id= Ensemble_ID)%>%
+  left_join(foo)
+  
+x1 = x1 %>% dplyr::rename(gene= external_gene_name)%>%
+  dplyr::select(gene, logFC, FDR)%>%
+  mutate(#contrast_field= "Rn_invitro", 
+         contrast_id = "Rn_invitro_ribo")
+
+x2= x2 %>%
+  dplyr::rename(ensembl_gene_id= Ensemble_ID_RNA)%>%
+  left_join(foo)
+
+x2 = x2 %>%
+  dplyr::rename(gene= external_gene_name)%>%
+  dplyr::select(gene, logFC, FDR)%>%
+  mutate(#contrast_field= "Rn_invitro", 
+         contrast_id = "Rn_invitro_rna")
+
+
+saveRDS(object = rbind(x1, x2),file =  "raw_data/invitro_PE/contrast_df.rds")
+
+

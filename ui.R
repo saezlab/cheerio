@@ -3,8 +3,9 @@ source("sub/global.R")
 source("sub/helper.R")
 ui = function(request) {
   fluidPage(
-    tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
     
+    rclipboardSetup(),
+    tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
     useShinyjs(),
     #tags$head(includeScript("google-analytics.js")),
     navbarPage(
@@ -50,15 +51,21 @@ ui = function(request) {
                              choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
         ),
         mainPanel(
+          
+          
+          
           h3("Regulation in Murine Cardiac Hypertrophy models"),
           h5("Gene expression regulation"),
           plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
           p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
                swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+          
           br(),
           br(),
+          
           h5("Ribo-seq and RNA-seq correlation"),
           plotOutput("cardiac_hyper_corr"),
+          
           br(),
           br(),
           br(),
@@ -66,15 +73,18 @@ ui = function(request) {
           
           h3("Regulation in Human Heart Failure studies"),
           h4("Regulation in bulk studies"),
+          
           h6("HF bulk transcripomic studies"),
           plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
             withSpinner(),
+          
           h5("Distribution of mean t-values"),
           h6("Mean t-values distribution of all bulk studies"),
           plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
             withSpinner(),
+          
           h5("Ranking of queried genes"),
-          h6("Consensus ranking, the higher the rank the more consistently is the gene regulated in human HF"),
+          h6("Consensus ranking, the lower the rank the more consistently is the gene regulated in human HF"),
           plotlyOutput("rank_position", width = "100%", height = "125px") %>%
             withSpinner(),
           
@@ -112,18 +122,41 @@ tabPanel(
   icon = icon("compress-alt"),
   sidebarPanel(
     includeMarkdown("inst/query_contrasts_sidebar.md"),
-    pickerInput(inputId = "select_contrast", 
-                label = "1. Select contrast(s):",
-                choices = sort(unique(joint_contrast_df$contrast_id)), 
+    br(),
+    #hr(),
+    strong("1. Select contrast(s)"),
+    br(), 
+    pickerInput(inputId = "select_contrast_mm", 
+                label = "1a. Animal studies:",
+                choices = unique(joint_contrast_df$contrast_id)[grep(pattern = "Mm|Rn", unique(joint_contrast_df$contrast_id))], 
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
-                selected = c("tac_ribo_2wk", "fetal_rna_fetal1", "HCMvsNF_Fibroblast") 
+                selected = c("Mm_tac_ribo_2wk") 
+    ),
+    
+    pickerInput(inputId = "select_contrast_hs", 
+                label = "1b. Human HCM studies:",
+                choices = unique(joint_contrast_df$contrast_id)[grep(pattern = "HCM", unique(joint_contrast_df$contrast_id))], 
+                multiple = T,
+                options = list(`live-search` = TRUE,
+                               size=10, `max-options` = 10),
+                selected = c("Hs_singlecell_HCMvsNF_Cardiomyocyte", "Hs_bulk_HCMvsNF") 
+    ),
+    
+    pickerInput(inputId = "select_contrast_hs2", 
+                label = "1c. Human HF or fetal gene program",
+                choices = unique(joint_contrast_df$contrast_id)[!grepl(pattern = "HCM|Mm|Rn", unique(joint_contrast_df$contrast_id))], 
+                multiple = T,
+                options = list(`live-search` = TRUE,
+                               size=10, `max-options` = 10),
+                selected = c("Hs_ReHeaT", "Hs_fetal_Akat14") 
     ),
    
     actionButton("reset_input_contrasts", "Reset contrasts"),
     br(),
-    br(),
+    #br(),
+    hr(),
     pickerInput(inputId = "select_alpha", 
                 label = "2. Select alpha for FDR cut off:",
                 choices = c(0.0001, 0.001, 0.01, 0.05, 0.1), 
@@ -137,23 +170,29 @@ tabPanel(
                 min = 1, max = 40,
                 value = 10, step= 1),
     br(), 
-    strong("4. Compare contrasts!"),
+    strong("4. Compare contrasts!"), 
+    br(), 
     actionButton("submit_contrast", label="Submit",
                  icon=icon("send")) 
   ),
   mainPanel(
     h3("Search for consistent genes"),
-    h5("Dysregulated genes (FDR-cutoff)"),
+    h4("Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist"),
+    p("Left Venn Diagram displays intersections of gene sets from selected contrasts at chosen FDR cut off"),
+    p("Right Venn Diagram displays directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
+    p(""),
+    hr(),
     br(),
     br(),
     
-    h5("Top consistently dysregulated gene(s)"),
+    h4("Top consistently dysregulated gene(s)"),
     plotOutput("cq_top"),
+    hr(),
     br(),
     br(),
     
-    h5("Table of consistently dysregulated gene(s)"),
+    h4("Table of consistently dysregulated gene(s)"),
     tabsetPanel(
       type = "tabs",
       tabPanel("Upregulated",
@@ -161,10 +200,34 @@ tabPanel(
       tabPanel("Downregulated",
                DT::dataTableOutput("cq_table_dn")),
       tabPanel("all", DT::dataTableOutput("cq_table_full"))
-      )
-    )
+      ),
+    hr(),  
+    br(),
+    br(),
     
-  
+    h3("Characterize conistent genes"),
+    br(),
+    h5("You can now explore functional annotations of the up or downregulated genes!"),
+    p("1. Click one of the buttons to copy genes into your clipboard."),
+       br(),
+    fluidRow(
+      uiOutput("clipup",  style = 'display: inline-block;margin-left: 15px;' ),
+    #  br(),
+      uiOutput("clipdn",  style = 'display: inline-block' )
+      ),
+    br(),
+    HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab.shinyapps.io/funki/'> FUNKi </a> 
+        from the <a href=' https://saezlab.org'> Saezlab </a and paste the genes into the gene submission field. 
+        </p> "),
+    HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr </a> 
+        from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
+        </p> "),
+    p("3. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
+    br(),
+    br(),
+    hr(),
+     
+  )
 ),
 
       
@@ -273,12 +336,19 @@ tabPanel(
           h6("Select your desired contrast, explore and sort data in table format or download"),
           tabsetPanel(
             type = "tabs",
-            tabPanel("Murine Hypertrophy", DT::dataTableOutput("mouse_hypertrophyDT")),
-            tabPanel("Human HF Bulk individual",  DT::dataTableOutput("human_HF_bulk_indDT")),
-            tabPanel("Human HF Bulk summary",  DT::dataTableOutput("human_HF_bulk_summDT")),
-            tabPanel("Human HF single cell", DT::dataTableOutput("human_scDT")),
-            tabPanel("Human fetal bulk", DT::dataTableOutput("human_fetalDT"))
+            tabPanel("Murine Hypertrophy", DT::dataTableOutput("mouse_hypertrophyDT"),
+                     br(), p("Download full data from zenodo, LINK")),
+            tabPanel("Human HF Bulk individual",  DT::dataTableOutput("human_HF_bulk_indDT"),
+                     br(), p("Download full data from zenodo, LINK")),
+            tabPanel("Human HF Bulk summary",  DT::dataTableOutput("human_HF_bulk_summDT"),
+                     br(), p("Download full data from zenodo, LINK")),
+            tabPanel("Human HF single cell", DT::dataTableOutput("human_scDT"),
+                     br(), p("Download full data from zenodo, LINK")),
+            tabPanel("Human fetal bulk", DT::dataTableOutput("human_fetalDT"),
+                     br(), p("Download full data from zenodo, LINK"))
           ),
+          br(), 
+          hr(),
           h6("*Human HF Bulk individual: Contains single study results from ReHeaT"),
           h6("*Human HF Bulk summary: Contains consensus ranking (summary of single studies) results from ReHeaT")
         )

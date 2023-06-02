@@ -238,13 +238,21 @@ observeEvent(input$reset_input, {
 ### Contrast query ------------------------------------------------------------------------------
 observeEvent(input$reset_input_contrasts, {
   updatePickerInput(session,
-                    inputId = "select_contrast", selected = character(0)
+                    inputId = "select_contrast_hs", selected = character(0)
+  )
+  updatePickerInput(session,
+                    inputId = "select_contrast_mm", selected = character(0)
+  )
+  updatePickerInput(session,
+                    inputId = "select_contrast_hs2", selected = character(0)
   )
 })
 
 cont_res = eventReactive(input$submit_contrast, {
   res= get_top_consistent_gene(joint_contrast_df = joint_contrast_df, 
-                          query_contrasts = input$select_contrast,
+                          query_contrasts = c(input$select_contrast_mm,
+                                              input$select_contrast_hs,
+                                              input$select_contrast_hs2),
                           cutoff = input$cut_off_genes,
                           alpha= as.numeric(input$select_alpha)
                           
@@ -272,12 +280,20 @@ output$cq_table_up= DT::renderDataTable({
     rename(mean_rank= m.r)%>%
     distinct(gene, mean_rank, mean_logFC)%>%
     arrange((mean_rank))%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                extensions = "Buttons", rownames = F,
-                option = list(scrollX = T, 
-                              autoWidth = T, 
-                              dom = "Bfrtip",
-                              buttons = c("copy", "csv", "excel")))
+    DT::datatable(
+      # extensions = 'Buttons', 
+      # options = list(
+      #   dom = 'Bfrtip',
+      #   buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+      # ))
+      escape=T, filter = "top",
+      selection = list(target = 'column'),
+      extensions = "Buttons", 
+      rownames = F,
+      options = list(scrollX = T,
+                    autoWidth = T,
+                    dom = "Bfrtip",
+                    buttons = c("copy", "csv", "excel","pdf")))
 })
 
 
@@ -311,6 +327,28 @@ output$cq_table_full= DT::renderDataTable({
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
 })
+
+output$clipup <- renderUI({
+    rclipButton(
+      inputId = "clipbtn_up",
+      label = "Upregulated genes",
+      clipText = paste0(cont_res()$genes$u, sep="\n"),
+      #clipText = enframe(cont_res()$genes$u),
+      icon = icon("clipboard")
+    )
+})
+
+output$clipdn <- renderUI({
+  rclipButton(
+    inputId = "clipbtn_dn",
+    label = "Downregulated genes",
+    clipText = paste0(cont_res()$genes$d, sep="\n"),
+    #clipText = enframe(cont_res()$genes$u),
+    icon = icon("clipboard")
+  )
+})
+
+
 #### Functional analysis ####
 # progeny
 observeEvent(input$reset_input_TF, {
@@ -643,7 +681,7 @@ output$gsea_res_plots = renderPlot({
 ####Download center ####
 
 # make gene contrast data accessible:
-output$mouse_hypertrophyDT = DT::renderDataTable({
+output$mouse_hypertrophyDT = DT::renderDataTable( {
   contrasts %>%
     select(modal, model, tp, MgiSymbol, logFC, FDR)%>%
     filter(!grepl("fetal", tp))%>%
@@ -654,10 +692,34 @@ output$mouse_hypertrophyDT = DT::renderDataTable({
            tp = as_factor(tp)) %>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+                  option = list(scrollX = T, 
+                                              autoWidth = T, 
+                                              dom = "Bfrtip",
+                                              buttons = c("copy", "csv", "excel")))
+                 
+  
+   # option = list(scrollX = T,
+                  #               autoWidth = T,
+                  #               dom = "Bfrtip",
+                  #               buttons = list(
+                  #                 list(extend = "csv", 
+                  #                      text = "Download Current Page", 
+                  #                      #filename = "page",
+                  #                      #buttons= c('copy', 'csv', 'excel', 'pdf')
+                  #                       exportOptions = list(
+                  #                         modifier = list(page = "current")
+                  #                         )
+                  #                      ),
+                  #                 list(extend = "csv",
+                  #                      text = "Download Full Results",
+                  #                      filename = "data",
+                  #                      exportOptions = list(
+                  #                        modifier = list(page = "all")
+                  #                        )
+                  #                      )
+                  #                 )
+                  #               )
+                  # )
 
 })
 

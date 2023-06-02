@@ -26,7 +26,7 @@ make_gsea_plot = function(signature, geneset, gene_level_stat) {
   
   # convert datafrane to named list of gene ids and scaled gene level statistic
   stats_list = stats_df %>% 
-    select(gene, stat) %>%
+    dplyr::select(gene, stat) %>%
     deframe()
   
   # extract the ranks/indices of the geneset member within the ranked signature
@@ -198,7 +198,7 @@ get_top_consistent_gene<-
     intersect_genes= names(venns[venns == length(query_contrasts)])
     
     df.msign= contrast_df_filt %>%
-      select(gene, contrast_id, logFC)%>% 
+      dplyr::select(gene, contrast_id, logFC)%>% 
       filter(gene %in% intersect_genes) %>%
       group_by(gene)%>% 
       summarise(m.sign = mean(sign(logFC)))%>%
@@ -229,7 +229,7 @@ get_top_consistent_gene<-
       df.full= df.median %>%
         arrange(desc(m.r)) %>%
         left_join(contrast_df_filt%>%
-                    select(gene, logFC, FDR, contrast_id), by= "gene")
+                    dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")
       
     if(length(intersect_genes)!= 0){
       top_dn2= df.median%>% filter(gene %in% top_dn) %>% arrange(desc(m.r))%>% slice(1:cutoff)%>% pull(gene)

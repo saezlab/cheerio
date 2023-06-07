@@ -5,8 +5,11 @@ ui = function(request) {
   fluidPage(
     
     rclipboardSetup(),
-    tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
+    #tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
     useShinyjs(),
+    HTML("<script src='https://cdn.drugst.one/latest/drugstone.js'></script>",
+         "<link rel='stylesheet' href='https://cdn.drugst.one/latest/styles.css'>"),
+    #tags$script(src= "https://cdn.drugst.one/latest/drugstone.js"),
     #tags$head(includeScript("google-analytics.js")),
     navbarPage(
       id = "menu", 
@@ -42,76 +45,90 @@ ui = function(request) {
                       selected = c("Nppb", "Nppa", "Postn", "Col1a1", "Myh7", "Myh6" ) 
                       ),
           
-          actionButton("reset_input", "Reset genes"),
-          
-          checkboxGroupInput(inputId= "contrasts", label= "Select contrasts", 
-                             selected = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ),
-                             inline = FALSE, width = NULL, 
-                             choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
-                             choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
+          actionButton("reset_input", "Reset genes")
+        #   
+        #   checkboxGroupInput(inputId= "contrasts", label= "Select contrasts", 
+        #                      selected = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ),
+        #                      inline = FALSE, width = NULL, 
+        #                      choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
+        #                      choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
         ),
         mainPanel(
-          
-          
-          
-          h3("Regulation in Murine Cardiac Hypertrophy models"),
-          h5("Gene expression regulation"),
-          plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
-          p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
+          tabsetPanel(
+            type = "tabs",
+            tabPanel("A. Animal models",
+                     h3("Regulation in Murine Cardiac Hypertrophy models"),
+                     h5("Gene expression regulation"),
+                     plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
+                     p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
                swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
-          
-          br(),
-          br(),
-          
-          h5("Ribo-seq and RNA-seq correlation"),
-          plotOutput("cardiac_hyper_corr"),
-          
-          br(),
-          br(),
-          br(),
-          hr(),
-          
-          h3("Regulation in Human Heart Failure studies"),
-          h4("Regulation in bulk studies"),
-          
-          h6("HF bulk transcripomic studies"),
-          plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
-            withSpinner(),
-          
-          h5("Distribution of mean t-values"),
-          h6("Mean t-values distribution of all bulk studies"),
-          plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
-            withSpinner(),
-          
-          h5("Ranking of queried genes"),
-          h6("Consensus ranking, the lower the rank the more consistently is the gene regulated in human HF"),
-          plotlyOutput("rank_position", width = "100%", height = "125px") %>%
-            withSpinner(),
-          
-          br(),
-          br(),
-          br(),
-          hr(),
-          
-          h4("Regulation on single cell level"),
-          h6("Celltype regulation compared between non failing, DCM and HCM"),
-          
-          plotOutput("HF_single", height= "900px", width= "100%") %>%
-            withSpinner(),
-          p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
-          
-          br(),
-          br(),
-          br(),
-          hr(),
-          
-          h3("Regulation in Fetal vs. Adult Human Hearts"),
-          plotOutput("fetal_gene_expression_plots", height= "250px"),
-          p("rna_fetal1, fetal study 1 (); rna_fetal2, fetal study 2 ()"),
-        
-          hr()
-         
-        )
+                     
+                     br(),
+                     br(),
+                     
+                     h5("Ribo-seq and RNA-seq correlation"),
+                     plotOutput("cardiac_hyper_corr"),
+                     
+                     br(),
+                     br(),
+                     br(),
+                     hr()
+                     ),
+            tabPanel("B. Human Hypertrophic Cardiomyopathy", 
+                     ##Magnet
+                     h4("Regulation on bulk level"),
+                     
+                     plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px"),
+                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
+                     br(),
+                     br(),
+                     hr(),
+                     
+                     h4("Regulation on single cell level"),
+                     #h6("Celltype regulation compared between non failing, DCM and HCM"),
+                     
+                     plotOutput("HF_single", height= "900px", width= "100%") %>%
+                       withSpinner(),
+                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
+                     
+                     br(),
+                     br(),
+                     br(),
+                     hr()
+            ),
+            tabPanel("C. Human Heart Failure",
+                     h4("Regulation in bulk from human heart failure studies"),
+                     h6("HF bulk transcripomic studies"),
+                     plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
+                       withSpinner(),
+                     
+                     h5("Distribution of mean t-values"),
+                     h6("Mean t-values distribution of all bulk studies"),
+                     plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
+                       withSpinner(),
+                     
+                     h5("Ranking of queried genes"),
+                     h6("Consensus ranking, the lower the rank the more consistently is the gene regulated in human HF"),
+                     plotlyOutput("rank_position", width = "100%", height = "125px") %>%
+                       withSpinner(),
+                     
+                     br(),
+                     br(),
+                     br(),
+                     hr(),
+                     
+                    
+                     ),
+            tabPanel("D. Fetal gene program", 
+                     h3("Regulation in Fetal vs. Adult Human Hearts"),
+                     plotOutput("fetal_gene_expression_plots", height= "250px"),
+                     p("rna_fetal1, fetal study 1 (Spurell et al, 2022); rna_fetal2, fetal study 2 (Akat et al, 2014)"),
+                     
+                     hr()
+                     )
+            )
+          )
+    
       ),
       
       
@@ -127,7 +144,7 @@ tabPanel(
     strong("1. Select contrast(s)"),
     br(), 
     pickerInput(inputId = "select_contrast_mm", 
-                label = "1a. Animal studies:",
+                label = "A) Animal studies:",
                 choices = unique(joint_contrast_df$contrast_id)[grep(pattern = "Mm|Rn", unique(joint_contrast_df$contrast_id))], 
                 multiple = T,
                 options = list(`live-search` = TRUE,
@@ -136,7 +153,7 @@ tabPanel(
     ),
     
     pickerInput(inputId = "select_contrast_hs", 
-                label = "1b. Human HCM studies:",
+                label = "B) Human HCM studies:",
                 choices = unique(joint_contrast_df$contrast_id)[grep(pattern = "HCM", unique(joint_contrast_df$contrast_id))], 
                 multiple = T,
                 options = list(`live-search` = TRUE,
@@ -145,8 +162,8 @@ tabPanel(
     ),
     
     pickerInput(inputId = "select_contrast_hs2", 
-                label = "1c. Human HF or fetal gene program",
-                choices = unique(joint_contrast_df$contrast_id)[!grepl(pattern = "HCM|Mm|Rn", unique(joint_contrast_df$contrast_id))], 
+                label = "C+D) Human HF or fetal gene program",
+                choices = unique(joint_contrast_df$contrast_id)[!grepl(pattern = "HCM|Mm|Rn|DCM", unique(joint_contrast_df$contrast_id))], 
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
@@ -216,74 +233,147 @@ tabPanel(
       uiOutput("clipdn",  style = 'display: inline-block' )
       ),
     br(),
-    HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab.shinyapps.io/funki/'> FUNKi </a> 
+    HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab-funki-analysis-rnfy3j.streamlit.app/'> FUNKi </a> 
         from the <a href=' https://saezlab.org'> Saezlab </a and paste the genes into the gene submission field. 
         </p> "),
     HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr </a> 
         from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
         </p> "),
+    HTML("<p> 2c. To explore possible gene network based drug interactions, tissue expression and related disorders go to <a href='https://drugst.one/standalone'> Drugst.one </a> 
+       and paste the genes into the network input field.
+        </p> "),
     p("3. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
     br(),
     br(),
-    hr(),
+    hr()
      
   )
 ),
-
+tabPanel(
+  title = "Test drugst.one",
+  icon = icon("chart-line"),
+  HTML( "<drugst-one id='drugstone-component-id'></drugst-one>")
+),
       
       #### Functional analysis ####
-      tabPanel(
+tabPanel(
         title = "Functional analysis",
         icon = icon("chart-line"),
         sidebarPanel(
           includeMarkdown("inst/functional_analysis_sidebar.md"),
-          
-          h3(),
+
+
           p("Choose the contrast to display functional footprinting results"),
-          # radioButtons("select_contrast_func2", "Select contrast", 
-          #              choices = c("murine_hypertrophy", 
-          #                          "human_HF", 
-          #                          "human_fetal")),
-          selectizeInput("select_contrast_func", "Select contrast", 
-                         multiple = F, 
-                         choices = c("murine_hypertrophy", 
-                                     "human_HF",
-                                     "human_HF_sc",
-                                     "human_fetal")),
-          h2(),
-          pickerInput(inputId = "select_tf", 
+        
+          pickerInput(inputId = "select_tf",
                       label = "Select transcription factor(s)",
-                      choices = sort(unique(tf_hypertrophy$source)), 
+                      choices = sort(TFs),
                       multiple = T,
                       options = list(`live-search` = TRUE,
                                      size=6, `max-options` = 6),
-                      selected = c("Gata4", "Gata3", "Hif1a")
+                      selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
           ),
           actionButton("reset_input_TF", "Reset TFs")
-        
+
         ),
         mainPanel(
-          h3("Estimated TF activity"),
-          h5(""),
-          plotOutput("tf_hypertrophy_plot",width = "100%", height = "900px"),
-          
-          h3("Estimated Pathway activity"),
-          plotOutput("progeny_hypertropy_plot"),
-
-          h3("Access, query and download raw data"),
-          h5(""),
           tabsetPanel(
             type = "tabs",
-            tabPanel("DoRothEA",
-                     DT::dataTableOutput("dorothea_table_hypertrophy")),
-            tabPanel("PROGENy", DT::dataTableOutput("progeny_table"))
-            
-            )
+            tabPanel("A. Animal models",
+                     h3("Transcription factor activities"),
+                     plotOutput("funcA_tf"),#, width = "100%", height = "600px"),
+                     p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks;
+               swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                     br(),
+                     br(),
+                     hr(),
+                     h3("Pathway activities"),
+                     plotOutput("funcA_pw"),#, width = "100%", height = "600px"),
+                     br(),
+                     br(),
+                     hr(),
+                      tabsetPanel(
+                        type = "tabs",
+                        tabPanel("TF-activities",
+                                 DT::dataTableOutput("funcA_tb_tf")),
+                         tabPanel("Pathway-activities",
+                                DT::dataTableOutput("funcA_tb_pw"))
+                      )
 
-          
+            ),
+            tabPanel("B. Human Hypertrophic Cardiomyopathy",
+                     ##Magnet
+                     h3("Transcription factor activities - bulk HCM"),
+                     plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
+                     br(),
+                     
+                     h3("Pathway activities - bulk HCM"),
+                     plotOutput("funcB_pw_bulk", width = "100%", height = "500px"),
+                     
+                     br(),
+                     br(),
+                     hr(),
+                     h3("Transcription factor activities - single cell HCM"),
+                     plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
+                     br(),
+                     br(),
+                     hr(),
+                     h3("Pathway activities - single cell HCM"),
+                     plotOutput("funcB_pw_sc", width = "100%", height = "500px"),
+                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
+                     br(),
+                     br(),
+                     hr(),
+                     tabsetPanel(
+                       type = "tabs",
+                       tabPanel("TF-activities bulk",
+                                DT::dataTableOutput("funcB_tf_tb_bulk")),
+                       tabPanel("TF-activities single cell ",
+                                DT::dataTableOutput("funcB_tf_tb_sc")),
+                       tabPanel("Pathway-activities bulk",
+                                DT::dataTableOutput("funcB_pw_bulk_tb")),
+                       tabPanel("Pathway-activities single cell",
+                                DT::dataTableOutput("funcB_pw_sc_tb"))
+                     )
+            ),
+            tabPanel("C. Human Heart Failure",
+                     h3("Transcription factor activities"),
+                    plotOutput("funcC_tf", width = "100%", height = "500px") %>%
+                     withSpinner(),
+                    br(),
+                    br(),
+                    hr(),
+                    h3("Pathway activities"),
+                     plotOutput("funcC_pw", height= "250px"),
+                    tabsetPanel(
+                      type = "tabs",
+                      tabPanel("TF-activities",
+                               DT::dataTableOutput("funcC_tf_tb")),
+                      tabPanel("Pathway-activities",
+                               DT::dataTableOutput("funcC_pw_tb"))
+                    )
+                     ),
+            tabPanel("D. Fetal gene program",
+                     h3("Transcriptionfactor activities"),
+                     plotOutput("funcD_tf", height= "250px"),
+                     br(),
+                     br(),
+                     hr(),
+                     h3("Pathway activities"),
+                     plotOutput("funcD_pw", height= "250px"),
+                     p("rna_fetal1, fetal study 1 (Spurell et al, 2022); rna_fetal2, fetal study 2 (Akat et al, 2014)"),
+                     tabsetPanel(
+                       type = "tabs",
+                       tabPanel("TF-activities",
+                                DT::dataTableOutput("funcD_tf_tb")),
+                       tabPanel("Pathway-activities",
+                                DT::dataTableOutput("funcD_pw_tb"))
+                     )
+                     )
+            )
           )
         ),
-      
+
       
       #### Input data ####
       tabPanel(

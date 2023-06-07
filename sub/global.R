@@ -36,8 +36,8 @@ theme_set(theme_cowplot())
 #gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
 ##hypertrophy mice
 contrasts = readRDS("data/contrasts.hypertrophy.rds")
-tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
-df_tf= readRDS("data/dorothea_results_all.rds")
+#tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
+
 
 #sc chaffin dcm, hcm
 sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
@@ -50,7 +50,7 @@ sc.gex= read.csv("data/sc_gex_chaffin.csv")%>%
 contrasts_HF = readRDS("data/study_contrasts.rds")
 ranks = readRDS("data/study_ranks.rds")
 directed_signature = readRDS("data/signature.rds")
-undirected_signature = readRDS("data/fisher_signature.rds")
+# undirected_signature = readRDS("data/fisher_signature.rds")
 
 #overview = readRDS("data/study_overview.rds")
 #progeny = readRDS("data/PROGENy_results.rds")
@@ -64,6 +64,7 @@ example_geneset = read_csv("data/multiple_geneset.csv")
 
 #progeny:
 prog.res= readRDS("data/progeny_results_all.rds")
+
 #dorothea:
 df_tf= readRDS("data/dorothea_results_all.rds")
 
@@ -71,6 +72,10 @@ df_tf= readRDS("data/dorothea_results_all.rds")
 #contrast query:
 joint_contrast_df= readRDS( "data/contrasts_query_df.rds")
 
+
+TFs= sapply(df_tf, function(x){
+  unique(toupper(x$source))
+})%>% unlist(use.names = F)%>% unique()
 
 
 

@@ -89,7 +89,7 @@ fetal1= readRDS(file = "data/fetalDEgenes_GSE52601.rds") %>%
   mutate(tp= "Hs_fetal_Akat14", 
          modal= "rna",
          model ="fetal") 
-fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>% 
+    fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>% 
   mutate(tp= "Hs_fetal_Spurell22", 
          modal= "rna",
          model ="fetal") 

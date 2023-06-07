@@ -3,47 +3,55 @@ server = function(input, output, session) {
   
 #### Query genes ####
 
-## murine cardiac Hyp:
+  ## reset the gene input button:
+  observeEvent(input$reset_input, {
+    updatePickerInput(session,
+                      inputId = "select_gene", selected = character(0)
+    )
+  })
+  
+  
+############### animal models
 #  cardiac hypertrophy logFCs:
-output$gene_expression_plots = renderPlot({
-  if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts))  {
-    pls= map(input$select_gene, function(x){
-      contrasts %>% 
-        filter(MgiSymbol==x, model != "fetal")%>%
-        mutate(exp.group= paste(modal, tp, sep= "_"),
-               sig= FDR<0.05)%>%
-        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
-        facet_grid(rows= vars(model))+
-        #geom_boxplot()+
-        geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black") +
-        theme_cowplot() +
-        scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"))+
-        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-        theme(panel.grid.major = element_line(color = "grey",
-                                              size = 0.1,
-                                              linetype = 1),
-              panel.border = element_rect(fill= NA, size=1, color= "black"), 
-              panel.grid.minor = element_blank(),
-              axis.text = element_text(size= 11), 
-          axis.title = element_text(size= 10)) +
-        coord_flip()+
-        ggtitle(x)
-      
-    })
-    p1= cowplot::plot_grid(plotlist =  pls)
-    p1
-  }
-})
+# output$gene_expression_plots = renderPlot({
+#   if (!is.null(input$select_gene) )  {
+#     pls= map(input$select_gene, function(x){
+#       contrasts %>% 
+#         filter(MgiSymbol==x, model != "fetal")%>%
+#         mutate(exp.group= paste(modal, tp, sep= "_"),
+#                sig= FDR<0.05)%>%
+#         ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
+#         facet_grid(rows= vars(model))+
+#         #geom_boxplot()+
+#         geom_hline(yintercept = 0, color= "black")+
+#         geom_col(width= 0.4, color ="black") +
+#         theme_cowplot() +
+#         scale_fill_manual(values = c("TRUE" = "darkgreen",
+#                                      "FALSE"="orange"))+
+#         labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+#         theme(panel.grid.major = element_line(color = "grey",
+#                                               size = 0.1,
+#                                               linetype = 1),
+#               panel.border = element_rect(fill= NA, size=1, color= "black"), 
+#               panel.grid.minor = element_blank(),
+#               axis.text = element_text(size= 11), 
+#           axis.title = element_text(size= 10)) +
+#         coord_flip()+
+#         ggtitle(x)
+#       
+#     })
+#     p1= cowplot::plot_grid(plotlist =  pls)
+#     p1
+#   }
+# })
 
 # cardiac hypertrophy show correlation::  
 output$cardiac_hyper_corr = renderPlot({
-  if (!is.null(input$select_gene) & ("Murine_Hypertrophy" %in% input$contrasts)){
+  if (!is.null(input$select_gene) ){
     
     plot.df= contrasts %>%
       filter(model!= "fetal")%>%
-      select(-PValue, -FDR)%>%
+      dplyr::select(-PValue, -FDR)%>%
       pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
       mutate(labels= ifelse(MgiSymbol %in% input$select_gene, MgiSymbol, "background"),
              labels= factor(labels, levels= c(input$select_gene, "background")),
@@ -83,9 +91,46 @@ output$cardiac_hyper_corr = renderPlot({
   }
 })
 
-## human HF: 
+#  cardiac hypertrophy logFCs:
+output$gene_expression_plots = renderPlot({
+  if (!is.null(input$select_gene) )  {
+    pls= map(input$select_gene, function(x){
+      joint_contrast_df %>% 
+        filter(gene==toupper(x),
+               grepl(pattern = "Mm|Rn", contrast_id))%>%
+        mutate(model= factor(ifelse(grepl("tac", contrast_id), "tac", 
+                              ifelse(grepl("swim", contrast_id ),
+                                     "swim", 
+                                     "invitro")),levels= c("swim", "tac", "invitro")),
+               sig= FDR<0.05)%>%
+        ggplot(aes(x = contrast_id, y = logFC, fill = sig)) +
+        facet_grid(rows= vars(model), scales = "free")+
+        #geom_boxplot()+
+        geom_hline(yintercept = 0, color= "black")+
+        geom_col(width= 0.4, color ="black") +
+        theme_cowplot() +
+        scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                     "FALSE"="orange"))+
+        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+        theme(panel.grid.major = element_line(color = "grey",
+                                              size = 0.1,
+                                              linetype = 1),
+              panel.border = element_rect(fill= NA, size=1, color= "black"), 
+              panel.grid.minor = element_blank(),
+              axis.text = element_text(size= 11), 
+              axis.title = element_text(size= 10)) +
+        coord_flip()+
+        ggtitle(x)
+      
+    })
+    p1= cowplot::plot_grid(plotlist =  pls)
+    p1
+  }
+})
+
+############### human HF: 
 output$HFgene_regulation_boxplot = renderPlot({
-  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
+  if (!is.null(input$select_gene) ) {
     pls= map(input$select_gene, function(x){
       contrasts_HF %>% 
         filter(gene== toupper(x))%>%
@@ -93,6 +138,7 @@ output$HFgene_regulation_boxplot = renderPlot({
         ggplot(aes(x = study , y = logFC, fill = sig)) +
         #facet_grid(rows= vars(model))+
         #geom_boxplot()+
+        geom_hline(yintercept = 0, color= "black")+
         geom_col(width= 0.4, color ="black") +
         theme_cowplot() +
         scale_fill_manual(values = c("TRUE" = "darkgreen",
@@ -115,7 +161,7 @@ output$HFgene_regulation_boxplot = renderPlot({
 
 # plot for rank positions
 output$rank_position = renderPlotly({
-  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
+  if (!is.null(input$select_gene) ) {
     sub_ranks = ranks %>%
       filter(gene %in% toupper(input$select_gene))
     
@@ -144,7 +190,7 @@ output$rank_position = renderPlotly({
 
 # distribution of mean t-values 
 output$mean_t_dist = renderPlotly({
-  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
+  if (!is.null(input$select_gene)) {
     # density
     sub_ranks = ranks %>%
       filter(gene %in% toupper(input$select_gene))
@@ -162,12 +208,13 @@ output$mean_t_dist = renderPlotly({
 
 ##  single cell human
 output$HF_single = renderPlot({
-  if (!is.null(input$select_gene) & ("Human_HF" %in% input$contrasts)) {
+  if (!is.null(input$select_gene) ) {
     pls= map(input$select_gene, function(x){
       sc.gex %>% 
         mutate(CellType= factor(CellType, levels= unique(sc.gex$CellType)),
                Comparison = factor(Comparison, levels= c( "HCMvs\nNF", "DCMvs\nNF", "DCMvs\nHCM")))%>%
-        filter(Gene==toupper(x))%>%
+        filter(Gene==toupper(x),
+               !grepl("DCMvs\nNF", Comparison))%>%
         # mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
         #        Comparison = factor(Comparison, levels= c("DCMvsNF", "HCMvsNF", "DCMvsHCM")))%>%
         ggplot(aes(x = CellType, y = logFC, fill = Significant)) +
@@ -194,9 +241,41 @@ output$HF_single = renderPlot({
   }
 })
 
+## magnet human 
+output$HFgene_regulation_magnet = renderPlot({
+  if (!is.null(input$select_gene)) {
+  pls= map(input$select_gene, function(x){
+    joint_contrast_df %>% 
+      filter(gene== toupper(x), 
+             grepl("bulk", contrast_id ), 
+             !grepl("DCMvsNF", contrast_id))%>%
+      mutate( sig= FDR<0.05)%>%
+      ggplot(aes(x = contrast_id , y = logFC, fill = sig)) +
+      #facet_grid(rows= vars(model))+
+      #geom_boxplot()+
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "HF Study", y = "log fold change", fill = "FDR<0.05") +
+      theme(panel.grid.major = element_line(color = "grey",
+                                            size = 0.1,
+                                            linetype = 1),
+            panel.grid.minor = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(x)
+  })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+  }
+})
+
 ## fetal gene expression :
 output$fetal_gene_expression_plots = renderPlot({
-  if (!is.null(input$select_gene) & ("Fetal" %in% input$contrasts))  {
+  if (!is.null(input$select_gene) )  {
     pls= map(input$select_gene, function(x){
       contrasts %>% 
         filter(MgiSymbol==x, 
@@ -224,14 +303,6 @@ output$fetal_gene_expression_plots = renderPlot({
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
   }
-})
-
-## reset the gene input button:
-observeEvent(input$reset_input, {
-  updatePickerInput(session,
-                    inputId = "select_gene", selected = character(0)
-                    )
-  #updateTextInput(session, "mytext", value = "test")
 })
 
 
@@ -358,239 +429,573 @@ observeEvent(input$reset_input_TF, {
 })
 
 # use switch function to update the contrast variable
-contrast_ID = reactive({
-  switch(input$select_contrast_func,
-        # "murine_hypertrophy"= tf_hypertrophy
-         "murine_hypertrophy"= list("TF" =df_tf$mm,
-                                    "prog"= list("rna"= prog.res$mmRNA,
-                                                 "ribo"=prog.res$mmRibo)
-                                    ),
-         "human_HF"= list("prog"= prog.res$hsReheat,
-                          "TF" =df_tf$hs_reheat),
-         "human_HF_sc"= list("prog"= prog.res$hsSC,
-                             "TF" =df_tf$hs_sc),
-         "human_fetal" = list("prog"= prog.res$hsfetal,
-                              "TF" =df_tf$hs_fetal)
-         )
-         
-})
+# contrast_ID = reactive({
+#   switch(input$select_contrast_func,
+#         # "murine_hypertrophy"= tf_hypertrophy
+#          "A"= list("TF" =df_tf$mm,
+#                                     "prog"= list("rna"= prog.res$mmRNA,
+#                                                  "ribo"=prog.res$mmRibo)
+#                                     ),
+#          "B"= list("prog"= prog.res$hsReheat,
+#                           "TF" =df_tf$hs_reheat),
+#          "C"= list("prog"= prog.res$hsSC,
+#                              "TF" =df_tf$hs_sc),
+#          "D" = list("prog"= prog.res$hsfetal,
+#                               "TF" =df_tf$hs_fetal)
+#          )
+#
+# })
+#
+# # dorothea
+# output$tf_hypertrophy_plot = renderPlot({
+#     if (!is.null(input$select_tf) & ("murine_hypertrophy" %in% input$select_contrast_func))  {
+#       pls= map(input$select_tf, function(x){
+#         contrast_ID()$TF%>%
+#           filter(source ==x)%>%
+#           mutate(condition= paste(tp, modal,sep =  "_"))%>%
+#           ggplot(aes(x = condition, y =  score, fill = sig)) +
+#           facet_grid(rows= vars(model))+
+#           #geom_boxplot()+
+#           geom_hline(yintercept = 0, color= "black")+
+#           geom_col(width= 0.4, color ="black") +
+#           theme_cowplot() +
+#           scale_fill_manual(values = c("TRUE" = "darkgreen",
+#                                        "FALSE"="orange"))+
+#           labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
+#           theme(panel.grid.major = element_line(color = "grey",
+#                                                 size = 0.1,
+#                                                 linetype = 1),
+#                 panel.grid.minor = element_blank(),
+#                 axis.text = element_text(size= 11),
+#                 axis.title = element_text(size= 10)) +
+#           coord_flip()+
+#           ggtitle(x)
+#
+#       })
+#       p1= cowplot::plot_grid(plotlist =  pls)
+#       p1
+#     }else if(!is.null(input$select_tf) & ("human_HF" %in% input$select_contrast_func))  {
+#       pls= map(input$select_tf, function(x){
+#         contrast_ID()$TF%>%
+#           #df_tf$hs_reheat%>%
+#           filter(source ==toupper(x))%>%
+#           ggplot(aes(x = study, y =  score, fill = sig)) +
+#           #facet_grid(rows= vars(model))+
+#           #geom_boxplot()+
+#           geom_hline(yintercept = 0, color= "black")+
+#           geom_col(width= 0.4, color ="black") +
+#           theme_cowplot() +
+#           scale_fill_manual(values = c("TRUE" = "darkgreen",
+#                                        "FALSE"="orange"))+
+#           labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
+#           theme(panel.grid.major = element_line(color = "grey",
+#                                                 size = 0.1,
+#                                                 linetype = 1),
+#                 panel.grid.minor = element_blank(),
+#                 axis.text = element_text(size= 11),
+#                 axis.title = element_text(size= 10)) +
+#           coord_flip()+
+#           ggtitle(x)
+#
+#       })
+#       p1= cowplot::plot_grid(plotlist =  pls)
+#       p1
+#     }else if(!is.null(input$select_tf) & ("human_HF_sc" %in% input$select_contrast_func))  {
+#       pls= map(input$select_tf, function(x){
+#         contrast_ID()$TF%>%
+#         #  df_tf$hs_sc%>%
+#           filter(source ==toupper(x))%>%
+#           ggplot(aes(x = celltype, y = score, fill = sig)) +
+#           facet_grid(rows= vars(condition))+
+#           geom_hline(yintercept = 0, color= "black")+
+#           geom_col(width= 0.4, color ="black") +
+#           theme_cowplot() +
+#           scale_fill_manual(values = c("TRUE" = "darkgreen",
+#                                        "FALSE"="orange"))+
+#           labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+#           theme(#panel.grid.major = element_blank(),
+#             panel.grid.minor = element_blank(),
+#             axis.text = element_text(size= 11),
+#             axis.title = element_text(size= 10)) +
+#           coord_flip()+
+#           ggtitle(x)
+#
+#       })
+#       p1= cowplot::plot_grid(plotlist =  pls)
+#       p1
+#     } else if(!is.null(input$select_tf) & ("human_fetal" %in% input$select_contrast_func))  {
+#       pls= map(input$select_tf, function(x){
+#         contrast_ID()$TF%>%
+#           #  df_tf$hs_sc%>%
+#           filter(source ==toupper(x))%>%
+#           ggplot(aes(x = condition, y = score, fill = sig)) +
+#           geom_hline(yintercept = 0, color= "black")+
+#           geom_col(width= 0.4, color ="black") +
+#           theme_cowplot() +
+#           scale_fill_manual(values = c("TRUE" = "darkgreen",
+#                                        "FALSE"="orange"))+
+#           labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+#           theme(#panel.grid.major = element_blank(),
+#             panel.grid.minor = element_blank(),
+#             axis.text = element_text(size= 11),
+#             axis.title = element_text(size= 10)) +
+#           coord_flip()+
+#           ggtitle(x)
+#
+#       })
+#       p1= cowplot::plot_grid(plotlist =  pls)
+#       p1
+#     }
+# })
+#
+# # progeny
+# output$progeny_hypertropy_plot = renderPlot({
+#   if (input$select_contrast_func == "murine_hypertrophy") {
+# 
+#     p1 =(plot_hmap(contrast_ID()$prog$rna)+plot_hmap(contrast_ID()$prog$ribo) )
+#     p1
+#   }else if( input$select_contrast_func == "human_HF"){
+#     p1 =plot_hmap(contrast_ID()$prog)
+#     p1
+#   }else if( input$select_contrast_func == "human_HF_sc"){
+#     sc.df.prg = contrast_ID()$prog
+#     sc.hmaps= lapply(names(sc.df.prg), function(x){
+#       plot_hmap(sc.df.prg[[x]], x,
+#                 max.ps = c(min(sapply(sc.df.prg, min)),
+#                            max(sapply(sc.df.prg, max)))
+#       )
+#     })
+#     names(sc.hmaps)= names(sc.df.prg)
+#     p1= eval(parse(text= paste(paste0("sc.hmaps$",paste0("`", names(sc.hmaps), "`")),  collapse = " + ")))
+#     #p1 =plot_hmap(contrast_ID()$prog$reheat)
+#     p1
+#   }else if( input$select_contrast_func == "human_fetal"){
+#     p1 =plot_hmap(contrast_ID()$prog)
+#     p1
+#   }
+# 
+#   })
+# 
+# output$progeny_table = DT::renderDataTable({
+#   if (input$select_contrast_func == "murine_hypertrophy") {
+#      lapply(names(contrast_ID()$prog), function(x){
+#     #df= lapply(names(test), function(x){
+#       contrast_ID()$prog[[x]]%>%
+#       as.data.frame()%>%
+#       rownames_to_column("contrast")%>%
+#       pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+#         mutate(sig= ifelse(abs(score)>2, T, F),
+#                score = signif(score, 3))
+#       })%>% do.call(rbind, .)%>%
+#       mutate(modal = factor(ifelse(grepl("rna", contrast), "rna", "ribo")),
+#              model = factor(ifelse(grepl("tac", contrast), "tac", "swim")),
+#              tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
+#              pathway= factor(pathway))%>%
+#       select(-contrast)%>%
+#       DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+  #                 extensions = "Buttons", rownames = F,
+  #                 option = list(scrollX = T,
+  #                               autoWidth = T,
+  #                               dom = "Bfrtip",
+  #                               buttons = c("copy", "csv", "excel")))
+  # }else if (input$select_contrast_func == "human_HF_sc") {
+  #   df= lapply(names(contrast_ID()$prog), function(x){
+  #     contrast_ID()$prog[[x]] %>%
+  #       as.data.frame()%>%
+  #       rownames_to_column("contrast")%>%
+  #       pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+  #       mutate(celltype= factor(x),
+  #              pathway= factor(pathway),
+  #              contrast= factor(contrast),
+  #              #sig= factor(sig)
+  #              )
+  #   })%>% do.call(rbind, .)
+  #   df%>%
+  #     #prog.res$hsReheat%>%
+  #     as.data.frame()%>%
+  #     mutate_if(is.character, as.factor) %>%
+  #     mutate(sig= factor(ifelse(abs(score)>2, T, F)),
+  #            score = signif(score, 3))%>%
+  #     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+  #                   extensions = "Buttons", rownames = F,
+  #                   option = list(scrollX = T,
+  #                                 autoWidth = T,
+  #                                 dom = "Bfrtip",
+  #                                 buttons = c("copy", "csv", "excel")))
+  # }else{
+  # #contrast_ID()$prog%>%
+  #   prog.res$hsfetal%>%
+#     as.data.frame()%>%
+#     rownames_to_column("contrast")%>%
+#       mutate_if(is.character, as.factor) %>%
+#     pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+#     mutate(sig= ifelse(abs(score)>2, T, F),
+#            score = signif(score, 3))%>%
+#     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+#                   extensions = "Buttons", rownames = F,
+#                   option = list(scrollX = T,
+#                                 autoWidth = T,
+#                                 dom = "Bfrtip",
+#                                 buttons = c("copy", "csv", "excel")))
+#
+#   }
+# })
+#
+# output$dorothea_table_hypertrophy = DT::renderDataTable({
+#   contrast_ID()$TF %>%
+#   #  df_tf$mm%>%
+#     dplyr::select(-statistic)%>%
+#     mutate_if(is.character, as.factor) %>%
+#     mutate(score = signif(score, 3),
+#            p_value = scientific(p_value),
+#            ) %>%
+#     #adj_pvalue = scientific(adj_pvalue),
+#     #source = factor(source, levels = sort(source))) %>%
+#     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+#                   extensions = "Buttons", rownames = F,
+#                   option = list(scrollX = T,
+#                                 autoWidth = T,
+#                                 dom = "Bfrtip",
+#                                 buttons = c("copy", "csv", "excel")))
+# })
 
-# dorothea
-output$tf_hypertrophy_plot = renderPlot({
-    if (!is.null(input$select_tf) & ("murine_hypertrophy" %in% input$select_contrast_func))  {
-      pls= map(input$select_tf, function(x){
-        contrast_ID()$TF%>%
-          filter(source ==x)%>%
-          mutate(condition= paste(tp, modal,sep =  "_"))%>%
-          ggplot(aes(x = condition, y =  score, fill = sig)) +
-          facet_grid(rows= vars(model))+
-          #geom_boxplot()+
-          geom_hline(yintercept = 0, color= "black")+
-          geom_col(width= 0.4, color ="black") +
-          theme_cowplot() +
-          scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                       "FALSE"="orange"))+
-          labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
-          theme(panel.grid.major = element_line(color = "grey",
-                                                size = 0.1,
-                                                linetype = 1),
-                panel.grid.minor = element_blank(),
-                axis.text = element_text(size= 11), 
-                axis.title = element_text(size= 10)) +
-          coord_flip()+
-          ggtitle(x)
-        
-      })
-      p1= cowplot::plot_grid(plotlist =  pls)
-      p1
-    }else if(!is.null(input$select_tf) & ("human_HF" %in% input$select_contrast_func))  {
-      pls= map(input$select_tf, function(x){
-        contrast_ID()$TF%>%
-          #df_tf$hs_reheat%>%
-          filter(source ==toupper(x))%>%
-          ggplot(aes(x = study, y =  score, fill = sig)) +
-          #facet_grid(rows= vars(model))+
-          #geom_boxplot()+
-          geom_hline(yintercept = 0, color= "black")+
-          geom_col(width= 0.4, color ="black") +
-          theme_cowplot() +
-          scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                       "FALSE"="orange"))+
-          labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
-          theme(panel.grid.major = element_line(color = "grey",
-                                                size = 0.1,
-                                                linetype = 1),
-                panel.grid.minor = element_blank(),
-                axis.text = element_text(size= 11), 
-                axis.title = element_text(size= 10)) +
-          coord_flip()+
-          ggtitle(x)
-        
-      })
-      p1= cowplot::plot_grid(plotlist =  pls)
-      p1
-    }else if(!is.null(input$select_tf) & ("human_HF_sc" %in% input$select_contrast_func))  {
-      pls= map(input$select_tf, function(x){
-        contrast_ID()$TF%>%
-        #  df_tf$hs_sc%>%
-          filter(source ==toupper(x))%>%
-          ggplot(aes(x = celltype, y = score, fill = sig)) +
-          facet_grid(rows= vars(condition))+
-          geom_hline(yintercept = 0, color= "black")+
-          geom_col(width= 0.4, color ="black") +
-          theme_cowplot() +
-          scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                       "FALSE"="orange"))+
-          labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
-          theme(#panel.grid.major = element_blank(),
+
+# ## A. nimal
+output$funcA_tf= renderPlot({
+  pls= map(input$select_tf, function(x){
+    df_tf$mm%>%
+      filter(source ==str_to_title(x))%>%
+      mutate(condition= paste(tp, modality,sep =  "_"),
+             condition= ifelse(tp=="", paste0("Rn", condition),paste0("Mm_", condition) ))%>%
+      ggplot(aes(x = condition, y =  score, fill = sig)) +
+      facet_grid(rows= vars(model), scales= "free")+
+      #geom_boxplot()+
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
+      theme(panel.grid.major = element_line(color = "grey",
+                                            size = 0.1,
+                                            linetype = 1),
             panel.grid.minor = element_blank(),
-            axis.text = element_text(size= 11), 
+            axis.text = element_text(size= 11),
             axis.title = element_text(size= 10)) +
-          coord_flip()+
-          ggtitle(x)
-        
-      })
-      p1= cowplot::plot_grid(plotlist =  pls)
-      p1
-    } else if(!is.null(input$select_tf) & ("human_fetal" %in% input$select_contrast_func))  {
-      pls= map(input$select_tf, function(x){
-        contrast_ID()$TF%>%
-          #  df_tf$hs_sc%>%
-          filter(source ==toupper(x))%>%
-          ggplot(aes(x = condition, y = score, fill = sig)) +
-          geom_hline(yintercept = 0, color= "black")+
-          geom_col(width= 0.4, color ="black") +
-          theme_cowplot() +
-          scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                       "FALSE"="orange"))+
-          labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
-          theme(#panel.grid.major = element_blank(),
-            panel.grid.minor = element_blank(),
-            axis.text = element_text(size= 11), 
-            axis.title = element_text(size= 10)) +
-          coord_flip()+
-          ggtitle(x)
-        
-      })
-      p1= cowplot::plot_grid(plotlist =  pls)
-      p1
-    }
-})
-
-# progeny 
-output$progeny_hypertropy_plot = renderPlot({
-  if (input$select_contrast_func == "murine_hypertrophy") {
-  
-    p1 =(plot_hmap(contrast_ID()$prog$rna)+plot_hmap(contrast_ID()$prog$ribo) )
-    p1
-  }else if( input$select_contrast_func == "human_HF"){
-    p1 =plot_hmap(contrast_ID()$prog)
-    p1
-  }else if( input$select_contrast_func == "human_HF_sc"){
-    sc.df.prg = contrast_ID()$prog
-    sc.hmaps= lapply(names(sc.df.prg), function(x){
-      plot_hmap(sc.df.prg[[x]], x,
-                max.ps = c(min(sapply(sc.df.prg, min)),
-                           max(sapply(sc.df.prg, max)))
-      )
-    })
-    names(sc.hmaps)= names(sc.df.prg)
-    p1= eval(parse(text= paste(paste0("sc.hmaps$",paste0("`", names(sc.hmaps), "`")),  collapse = " + ")))
-    #p1 =plot_hmap(contrast_ID()$prog$reheat)
-    p1
-  }else if( input$select_contrast_func == "human_fetal"){
-    p1 =plot_hmap(contrast_ID()$prog)
-    p1
-  }
-
+      coord_flip()+
+      ggtitle(x)
   })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+})
+output$funcA_pw= renderPlot({
+  p1 =(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo)+plot_hmap(prog.res$rn))
+  p1
+})
 
-output$progeny_table = DT::renderDataTable({
-  if (input$select_contrast_func == "murine_hypertrophy") {
-     lapply(names(contrast_ID()$prog), function(x){
+output$funcA_tb_pw=DT::renderDataTable({
+  lapply(names(prog.res[1:3]), function(x){
     #df= lapply(names(test), function(x){
-      contrast_ID()$prog[[x]]%>% 
+    prog.res[[x]]%>%
       as.data.frame()%>%
       rownames_to_column("contrast")%>%
-      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>% 
-        mutate(sig= ifelse(abs(score)>2, T, F),
-               score = signif(score, 3))
-      })%>% do.call(rbind, .)%>%
-      mutate(modal = factor(ifelse(grepl("rna", contrast), "rna", "ribo")),
-             model = factor(ifelse(grepl("tac", contrast), "tac", "swim")),
-             tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
-             pathway= factor(pathway))%>%
-      select(-contrast)%>%
-      DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+      mutate(sig= ifelse(abs(score)>2, T, F),
+             score = signif(score, 3))
+  })%>% do.call(rbind, .)%>%
+  mutate(modal = factor(ifelse(grepl("rna", contrast), "rna", "ribo")),
+         model = factor(ifelse(grepl("tac", contrast), "tac",
+                               ifelse(grepl("swim", contrast), "swim", "invitro"))),
+         tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
+         pathway= factor(pathway))%>%
+  dplyr::select(-contrast)%>%
+  DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                extensions = "Buttons", rownames = F,
+                option = list(scrollX = T,
+                              autoWidth = T,
+                              dom = "Bfrtip",
+                              buttons = c("copy", "csv", "excel")))
+  })
+output$funcA_tb_tf= DT::renderDataTable({
+  df_tf$mm %>%
+    dplyr::select(-statistic)%>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(score = signif(score, 3),
+           p_value = scientific(p_value),
+    ) %>%
+    #adj_pvalue = scientific(adj_pvalue),
+    #source = factor(source, levels = sort(source))) %>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
+                  option = list(scrollX = T,
+                                autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
-  }else if (input$select_contrast_func == "human_HF_sc") {
-    df= lapply(names(contrast_ID()$prog), function(x){
-      contrast_ID()$prog[[x]] %>%
-        as.data.frame()%>%
-        rownames_to_column("contrast")%>%
-        pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-        mutate(celltype= factor(x),
-               pathway= factor(pathway), 
-               contrast= factor(contrast), 
-               #sig= factor(sig)
-               )
-    })%>% do.call(rbind, .)
-    df%>%
-      #prog.res$hsReheat%>%
-      as.data.frame()%>%
-      mutate_if(is.character, as.factor) %>% 
-      mutate(sig= factor(ifelse(abs(score)>2, T, F)),
-             score = signif(score, 3))%>%
-      DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                    extensions = "Buttons", rownames = F,
-                    option = list(scrollX = T, 
-                                  autoWidth = T, 
-                                  dom = "Bfrtip",
-                                  buttons = c("copy", "csv", "excel")))
-  }else{
-  #contrast_ID()$prog%>%
-    prog.res$hsfetal%>%
+})
+## B
+output$funcB_tf_sc=renderPlot({
+  pls= map(input$select_tf, function(x){
+    df_tf$hs_sc%>%
+      filter(source ==toupper(x),
+             condition != "DCMvs\nNF")%>%
+      ggplot(aes(x = celltype, y = score, fill = sig)) +
+      facet_grid(rows= vars(condition))+
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+      theme(#panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size= 11),
+        axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(x)
+
+  })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+})
+output$funcB_tf_tb_sc= DT::renderDataTable({
+  df_tf$hs_sc%>%
+    dplyr::select(-statistic)%>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(score = signif(score, 3),
+           p_value = scientific(p_value),
+    ) %>%
+    dplyr::select(source, condition, celltype, everything())%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+output$funcB_tf_bulk=renderPlot({
+  pls= map(input$select_tf, function(x){
+    df_tf$hs_magnet %>%
+      filter(source ==toupper(x),
+             condition != "Hs_bulk_DCMvsNF")%>%
+      ggplot(aes(x = condition, y = score, fill = sig)) +
+     # facet_grid(rows= vars(condition))+
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+      theme(#panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size= 11),
+        axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(x)
+
+  })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+})
+output$funcB_tf_tb_bulk= DT::renderDataTable({
+df_tf$hs_magnet%>%
+    dplyr::select(-statistic)%>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(score = signif(score, 3),
+           p_value = scientific(p_value),
+    ) %>%
+    #adj_pvalue = scientific(adj_pvalue),
+    #source = factor(source, levels = sort(source))) %>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+
+output$funcB_pw_bulk = renderPlot({
+  p1 =plot_hmap(prog.res$hsmagnet)
+  p1
+})
+output$funcB_pw_bulk_tb=DT::renderDataTable({
+  prog.res$hsmagnet%>%
     as.data.frame()%>%
     rownames_to_column("contrast")%>%
-      mutate_if(is.character, as.factor) %>% 
+    mutate_if(is.character, as.factor) %>%
     pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
     mutate(sig= ifelse(abs(score)>2, T, F),
            score = signif(score, 3))%>%
     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
+                  option = list(scrollX = T,
+                                autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
-    
-  }
 })
+output$funcB_pw_sc = renderPlot({
+  sc.df.prg =prog.res$hsSC
+  sc.hmaps= lapply(names(sc.df.prg), function(x){
+    plot_hmap(sc.df.prg[[x]], x,
+              max.ps = c(min(sapply(sc.df.prg, min)),
+                         max(sapply(sc.df.prg, max)))
+    )
+  })
+  names(sc.hmaps)= names(sc.df.prg)
+  p1= eval(parse(text= paste(paste0("sc.hmaps$",paste0("`", names(sc.hmaps), "`")),  collapse = " + ")))
+  #p1 =plot_hmap(contrast_ID()$prog$reheat)
+  p1
+})
+output$funcB_pw_sc_tb=DT::renderDataTable({
+  df= lapply(names(prog.res$hsSC), function(x){
+    prog.res$hsSC[[x]] %>%
+      as.data.frame()%>%
+      rownames_to_column("contrast")%>%
+      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+      mutate(celltype= factor(x),
+             pathway= factor(pathway),
+             contrast= factor(contrast),
+             #sig= factor(sig)
+      )
+  })%>% do.call(rbind, .)
+  df%>%
+    as.data.frame()%>%
+    filter(contrast!="DCMvs.NF")%>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(sig= factor(ifelse(abs(score)>2, T, F)),
+           score = signif(score, 3))%>%
+    dplyr::select(contrast, celltype, everything())%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+##C
+output$funcC_tf=renderPlot({
+  pls= map(input$select_tf, function(x){
+    df_tf$hs_reheat%>%
+      filter(source ==toupper(x))%>%
+      ggplot(aes(x = study, y =  score, fill = sig)) +
+      #facet_grid(rows= vars(model))+
+      #geom_boxplot()+
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") +
+      theme(panel.grid.major = element_line(color = "grey",
+                                            size = 0.1,
+                                            linetype = 1),
+            panel.grid.minor = element_blank(),
+            axis.text = element_text(size= 11),
+            axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(x)
 
-output$dorothea_table_hypertrophy = DT::renderDataTable({
-  contrast_ID()$TF %>%
-  #  df_tf$mm%>%
+  })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+})
+output$funcC_pw= renderPlot({
+  p1 =plot_hmap(prog.res$hsReheat)
+  p1
+})
+output$funcC_pw_tb=DT::renderDataTable({
+  prog.res$hsReheat%>%
+    as.data.frame()%>%
+    rownames_to_column("contrast")%>%
+    mutate_if(is.character, as.factor) %>%
+    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+    mutate(sig= ifelse(abs(score)>2, T, F),
+           score = signif(score, 3))%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+output$funcC_tf_tb= DT::renderDataTable({
+  df_tf$hs_reheat
     dplyr::select(-statistic)%>%
-    mutate_if(is.character, as.factor) %>% 
+    mutate_if(is.character, as.factor) %>%
     mutate(score = signif(score, 3),
-           p_value = scientific(p_value), 
-           ) %>%
+           p_value = scientific(p_value),
+    ) %>%
     #adj_pvalue = scientific(adj_pvalue),
     #source = factor(source, levels = sort(source))) %>%
     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
                   extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T, 
-                                autoWidth = T, 
+                  option = list(scrollX = T,
+                                autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
 })
-# 
+
+##D
+output$funcD_tf= renderPlot({
+  pls= map(input$select_tf, function(x){
+    df_tf$hs_fetal%>%
+      filter(source ==toupper(x))%>%
+      ggplot(aes(x = condition, y = score, fill = sig)) +
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot() +
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      labs(x = "", y = "TF activity score", fill = "FDR<0.05") +
+      theme(#panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size= 11),
+        axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(x)
+
+  })
+  p1= cowplot::plot_grid(plotlist =  pls)
+  p1
+})
+output$funcD_tf_tb= DT::renderDataTable({
+  df_tf$hs_fetal%>%
+    dplyr::select(-statistic)%>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(score = signif(score, 3),
+           p_value = scientific(p_value),
+    ) %>%
+    #adj_pvalue = scientific(adj_pvalue),
+    #source = factor(source, levels = sort(source))) %>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
+output$funcD_pw= renderPlot({
+    p1 =plot_hmap(prog.res$hsfetal)
+  p1
+})
+output$funcD_pw_tb=DT::renderDataTable({
+  prog.res$hsfetal%>%
+    as.data.frame()%>%
+    rownames_to_column("contrast")%>%
+    mutate_if(is.character, as.factor) %>%
+    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
+    mutate(sig= ifelse(abs(score)>2, T, F),
+           score = signif(score, 3))%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+})
 
 
-hide("loading-content", TRUE, "fade")  
+
+hide("loading-content", TRUE, "fade")
 
 
 #### Custom Enrichment ####

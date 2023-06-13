@@ -20,7 +20,7 @@ library(purrr)
 library(ggplot2)
 library(cowplot)
 library(tidyr)
-#library(fgsea)
+library(fgsea)
 library(decoupleR)
 library(readr)
 library(stringr)
@@ -40,11 +40,11 @@ contrasts = readRDS("data/contrasts.hypertrophy.rds")
 
 
 #sc chaffin dcm, hcm
-sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
-  as_tibble()%>%
-  mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
-         Comparison= str_replace(Comparison, "vs", "vs\n"),
-         Comparison = factor(Comparison, levels= c("DCMvs\nNF", "HCMvs\nNF", "DCMvs\nHCM")))
+# sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
+#   as_tibble()%>%
+#   mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
+#          Comparison= str_replace(Comparison, "vs", "vs\n"),
+#          Comparison = factor(Comparison, levels= c("DCMvs\nNF", "HCMvs\nNF", "DCMvs\nHCM")))
 
 ##reheat
 contrasts_HF = readRDS("data/study_contrasts.rds")

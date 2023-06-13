@@ -167,7 +167,7 @@ tabPanel(
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
-                selected = c("Hs_ReHeaT", "Hs_fetal_Akat14") 
+                selected = c("Hs_fetal_Akat14") 
     ),
    
     actionButton("reset_input_contrasts", "Reset contrasts"),
@@ -190,14 +190,14 @@ tabPanel(
     strong("4. Compare contrasts!"), 
     br(), 
     actionButton("submit_contrast", label="Submit",
-                 icon=icon("send")) 
+                 icon=icon("paper-plane")) 
   ),
   mainPanel(
     h3("Search for consistent genes"),
     h4("Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist"),
-    p("Left Venn Diagram displays intersections of gene sets from selected contrasts at chosen FDR cut off"),
-    p("Right Venn Diagram displays directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
+    p("A. Venn Diagram displays intersections of gene sets from selected contrasts at chosen FDR cut off"),
+    p("B. Barplot displays number of genes regarding their directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
     p(""),
     hr(),
     br(),
@@ -257,7 +257,7 @@ tabPanel(
       
       #### Functional analysis ####
 tabPanel(
-        title = "Functional analysis",
+        title = "Functional Genomics",
         icon = icon("chart-line"),
         sidebarPanel(
           includeMarkdown("inst/functional_analysis_sidebar.md"),
@@ -389,27 +389,23 @@ tabPanel(
              second column named 'geneset' must be added containing the gene set 
              name/identifier."),
           fileInput("user_input", label="Upload gene sets (.csv)"),
-          checkboxGroupInput(inputId= "contrasts_gsea", label= "Select contrasts to perform enrichment on", 
-                             selected = c("Murine_Hypertrophy"),
-                             inline = FALSE, width = NULL, 
-                             choiceNames = c("Murine Hypertrophy" , "Human heart failure bulk", 
-                                             "Human heart failure sc", "Human fetal" ),
-                             choiceValues = c("murine_hypertrophy" , "human_HF","human_HF_sc",  "fetal" )),
-          
-          p("Choose whether you would like to test your gene set agains a 
-             directed or undirected signature."),
-          radioButtons("signature_source", "Signature", 
-                       choices = c("directed", "undirected")),
+          pickerInput(inputId = "select_contrast_enrichment", 
+                      label = "Contrast(s)",
+                      choices = c("A. Animal models", "B. Human HCM", "C. Human HF", "D. Fetal reprogramming"), 
+                      multiple = F,
+                      selected = c("A. Animal models") 
+          ),
           p("GSEA will be performed upon clicking the submit button."),
           actionButton("submit", label="Submit",
-                       icon=icon("send")) 
+                       icon=icon("paper-plane")) 
           ),
         mainPanel(
-          h4("GSEA result"),
-          DT::dataTableOutput("gsea_res_table"),
-          hr(),
           h4("GSEA plots"),
           plotOutput("gsea_res_plots", width = "100%", height = "600px") %>%
+            withSpinner(),
+          hr(),
+          h4("GSEA result"),
+          DT::dataTableOutput("gsea_res_table") %>%
             withSpinner()
         )
       ),
@@ -444,23 +440,8 @@ tabPanel(
         )
       ),
       
-      
-      #### Study overview ####
-      # tabPanel(
-      #   title = "Study overview",
-      #   icon = icon("database"),
-      #   sidebarPanel(
-      #     includeMarkdown("inst/overview_sidebar.md")
-      #   ),
-      #   mainPanel(
-      #     DT::dataTableOutput("overview"),
-      #     br(),
-      #     includeMarkdown("inst/overview.md")
-      #   )
-      # ),
-      
       #### Footer ####
-      footer = column(12, align="center", "CH-App 2020")
+      footer = column(12, align="center", "CHEERIO-App 2023")
     ) # close navbarPage
   ) # close fluidPage
 }

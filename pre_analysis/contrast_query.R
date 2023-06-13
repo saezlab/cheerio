@@ -39,9 +39,14 @@ sc.gex= read.csv("data/sc_gex_chaffin.csv")%>%
 
 sc.gex2= sc.gex %>% 
   mutate(contrast_id = paste("Hs_singlecell",Comparison, CellType, sep= "_"),
-         FDR= 10^-log10.P.) %>% 
+         FDR= 10^-log10.P., 
+         logFC = ifelse(grepl("DCMvsHCM", contrast_id), logFC*-1, logFC))   %>% 
   rename(gene= Gene)%>%
   dplyr::select(contrast_id, gene, logFC, FDR)
+
+#flip direction of contrast comp (logFC flipped above)
+sc.gex2$contrast_id= str_replace_all(pattern = "DCMvsHCM",replacement =  "HCMvsDCM",sc.gex2$contrast_id)
+
 
 ## change the directionality of the hcm dcm comparison:
 sc.gex2  = sc.gex2%>% 
@@ -74,11 +79,17 @@ joint_contrast_df %>% group_by(contrast_id) %>%
          ranks2= rank(-ranks1),
          max.ranks= max(ranks2), 
          ranks3= ranks2/max.ranks, 
-         gene = toupper(gene))
+         gene = toupper(gene),
+         sig= FDR<0.05)
 
 
 unique(joint_contrast_df$contrast_id)
 
+joint_contrast_df= 
+  joint_contrast_df %>% 
+  mutate(cc= ifelse(grepl("Rn|Mm", contrast_id), "A", "C") ,
+         cc= ifelse(grepl("fetal", contrast_id), "D", cc),
+         cc= ifelse(grepl("HCM", contrast_id), "B", cc))
 
 saveRDS(joint_contrast_df, "data/contrasts_query_df.rds")
 joint_contrast_df= readRDS( "data/contrasts_query_df.rds")

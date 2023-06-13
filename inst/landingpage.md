@@ -1,10 +1,11 @@
-# Welcome to **CHROMA**,
+# Welcome to **Cheerio**,
 > **C**ardiac **H**ypertrophy t**R**anscript**OM**e **App**lication
 
 
 ### Graphical abstract
-<img src="../www/graph_abstract.png" width="100%", align="middle">
-
+<p>
+<img src="../www/graph_abstract.png" width="100%", align="middle"/>
+</p>
 
 ### Abstract
 
@@ -16,7 +17,7 @@ We curated and analyzed different HCM related disease models, data modalities an
 we present in a database.
 
 An overview of the analyzed data is visualized here: 
-
-<img src="../www/hypertrophyDB_scheme.png" width="100%", align="middle">
-
+<p>
+<img src="../www/hypertrophyDB_scheme2.png" width="100%", align="middle"/>
+</p>
 ### Citation

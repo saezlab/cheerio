@@ -173,7 +173,7 @@ plot_hmap= function(prog.matrix,
 ## contrast query function: 
 get_top_consistent_gene<-
   function(joint_contrast_df,
-           query_contrasts= c("tac_ribo_2wk", "fetal_rna_fetal1", "HCMvsNF_Fibroblast"), 
+           query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
            alpha= 0.05, 
            cutoff= 15){
     
@@ -189,11 +189,6 @@ get_top_consistent_gene<-
     x= lapply(x, unique)
     
     p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
-    
-    p.hist= enframe(venns) %>% ggplot(., aes(x= factor(value)))+
-      geom_histogram(stat="count")+
-      labs(x= "number of contrasts reporting gene")
-    
     
     intersect_genes= names(venns[venns == length(query_contrasts)])
     
@@ -211,13 +206,18 @@ get_top_consistent_gene<-
     top_dn = df.msign %>%
       filter(top_== "downregulated")%>% pull(gene)
     
-    x= split(df.msign$gene, df.msign$top_)
-    x= lapply(x, unique)  
-    p.venn2= plot(euler(x, shape = "ellipse"), quantities = TRUE)
+    p.bar.intersect=
+      ggplot(df.msign, aes(x= factor(top_, levels = c("upregulated", 
+                                                    "downregulated", 
+                                                    "inconsistent"))))+
+      geom_bar()+
+      labs(x= "consistency of regulation")+
+      theme(axis.text.x = element_text(angle= 60, hjust= 1))
     
-    p.int=  cowplot::plot_grid( p.venn,p.venn2,
-                               ncol = 2, labels = c("Contrast intersection(s)", 
-                                                   "Intersection breakdown"))
+    p.int=  cowplot::plot_grid( p.venn,p.bar.intersect,
+                               ncol = 2, labels = c("A", 
+                                                   "B"), 
+                               rel_widths = c(1,0.3))
     
     # calculate the median normalized rank across contrasts
       df.median= joint_contrast_df %>%
@@ -276,3 +276,36 @@ get_top_consistent_gene<-
                 p.top_genes= p.top_genes
     ))
   }
+
+
+# plot logFC
+
+plot_logfc_gene = function(joint_contrast_df, 
+                           x_column= "contrast_id", 
+                           y_column= "logFC", 
+                           fg_name= NULL, 
+                           gene){
+  
+  p1= joint_contrast_df %>%
+  ggplot(aes(x = !!rlang::ensym(x_column), y = !!rlang::ensym(y_column), fill = sig)) +
+    geom_hline(yintercept = 0, color= "black")+
+    geom_col(width= 0.4, color ="black") +
+    theme_cowplot()+
+    scale_x_discrete(drop=FALSE)+
+    scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                 "FALSE"="orange", 
+                                 drop= FALSE))+
+    labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+    theme(panel.grid.major = element_line(color = "grey",
+                                          linewidth = 0.1,
+                                          linetype = 1),
+          panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+    coord_flip()+
+    ggtitle(gene)
+  
+  if(!is.null(fg_name)){p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")}
+  p1
+}

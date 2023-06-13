@@ -10,42 +10,7 @@ server = function(input, output, session) {
     )
   })
   
-  
-############### animal models
-#  cardiac hypertrophy logFCs:
-# output$gene_expression_plots = renderPlot({
-#   if (!is.null(input$select_gene) )  {
-#     pls= map(input$select_gene, function(x){
-#       contrasts %>% 
-#         filter(MgiSymbol==x, model != "fetal")%>%
-#         mutate(exp.group= paste(modal, tp, sep= "_"),
-#                sig= FDR<0.05)%>%
-#         ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
-#         facet_grid(rows= vars(model))+
-#         #geom_boxplot()+
-#         geom_hline(yintercept = 0, color= "black")+
-#         geom_col(width= 0.4, color ="black") +
-#         theme_cowplot() +
-#         scale_fill_manual(values = c("TRUE" = "darkgreen",
-#                                      "FALSE"="orange"))+
-#         labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-#         theme(panel.grid.major = element_line(color = "grey",
-#                                               size = 0.1,
-#                                               linetype = 1),
-#               panel.border = element_rect(fill= NA, size=1, color= "black"), 
-#               panel.grid.minor = element_blank(),
-#               axis.text = element_text(size= 11), 
-#           axis.title = element_text(size= 10)) +
-#         coord_flip()+
-#         ggtitle(x)
-#       
-#     })
-#     p1= cowplot::plot_grid(plotlist =  pls)
-#     p1
-#   }
-# })
-
-# cardiac hypertrophy show correlation::  
+# cardiac mouse hypertrophy show correlation between transcript and translatome:  
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) ){
     
@@ -95,32 +60,16 @@ output$cardiac_hyper_corr = renderPlot({
 output$gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) )  {
     pls= map(input$select_gene, function(x){
-      joint_contrast_df %>% 
+      to_plot_df= joint_contrast_df %>% 
         filter(gene==toupper(x),
                grepl(pattern = "Mm|Rn", contrast_id))%>%
         mutate(model= factor(ifelse(grepl("tac", contrast_id), "tac", 
                               ifelse(grepl("swim", contrast_id ),
                                      "swim", 
-                                     "invitro")),levels= c("swim", "tac", "invitro")),
-               sig= FDR<0.05)%>%
-        ggplot(aes(x = contrast_id, y = logFC, fill = sig)) +
-        facet_grid(rows= vars(model), scales = "free")+
-        #geom_boxplot()+
-        geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black") +
-        theme_cowplot() +
-        scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"))+
-        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-        theme(panel.grid.major = element_line(color = "grey",
-                                              size = 0.1,
-                                              linetype = 1),
-              panel.border = element_rect(fill= NA, size=1, color= "black"), 
-              panel.grid.minor = element_blank(),
-              axis.text = element_text(size= 11), 
-              axis.title = element_text(size= 10)) +
-        coord_flip()+
-        ggtitle(x)
+                                     "invitro")),levels= c("swim", "tac", "invitro")))
+      
+      
+      plot_logfc_gene(to_plot_df, fg_name = "model",  gene= x)
       
     })
     p1= cowplot::plot_grid(plotlist =  pls)
@@ -128,34 +77,19 @@ output$gene_expression_plots = renderPlot({
   }
 })
 
-############### human HF: 
+## reheat (human HF): 
 output$HFgene_regulation_boxplot = renderPlot({
   if (!is.null(input$select_gene) ) {
     pls= map(input$select_gene, function(x){
-      contrasts_HF %>% 
+      # prep single study df
+      to_plot_df= contrasts_HF %>% 
         filter(gene== toupper(x))%>%
-        mutate( sig= adj.P.Val<0.05)%>%
-        ggplot(aes(x = study , y = logFC, fill = sig)) +
-        #facet_grid(rows= vars(model))+
-        #geom_boxplot()+
-        geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black") +
-        theme_cowplot() +
-        scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"))+
-        labs(x = "HF Study", y = "log fold change", fill = "FDR<0.05") +
-        theme(panel.grid.major = element_line(color = "grey",
-                                              size = 0.1,
-                                              linetype = 1),
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size= 11), 
-          axis.title = element_text(size= 10)) +
-        coord_flip()+
-        ggtitle(x)
-      })
+        mutate( sig= adj.P.Val<0.05)
+      # plot
+      plot_logfc_gene(to_plot_df, x_column = study,  gene= x)
+        })
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
-    
   }
 })
 
@@ -206,34 +140,20 @@ output$mean_t_dist = renderPlotly({
   }
 })
 
-##  single cell human
+## human HCM single cell
 output$HF_single = renderPlot({
   if (!is.null(input$select_gene) ) {
     pls= map(input$select_gene, function(x){
-      sc.gex %>% 
-        mutate(CellType= factor(CellType, levels= unique(sc.gex$CellType)),
-               Comparison = factor(Comparison, levels= c( "HCMvs\nNF", "DCMvs\nNF", "DCMvs\nHCM")))%>%
-        filter(Gene==toupper(x),
-               !grepl("DCMvs\nNF", Comparison))%>%
-        # mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
-        #        Comparison = factor(Comparison, levels= c("DCMvsNF", "HCMvsNF", "DCMvsHCM")))%>%
-        ggplot(aes(x = CellType, y = logFC, fill = Significant)) +
-        facet_grid(rows= vars(Comparison))+
-        geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black",drop=FALSE)+
-        scale_x_discrete(drop=FALSE)+
-        theme_cowplot() +
-        scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"), 
-                          drop= FALSE)+
-        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-        theme(#panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size= 11), 
-          axis.title = element_text(size= 10)) +
-        coord_flip()+
-        ggtitle(x)
-      
+      plot_df= joint_contrast_df%>%
+        filter(grepl("singlecell", contrast_id), 
+               !grepl("DCMvsNF", contrast_id))%>%
+        mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
+               Comparison = factor(str_extract(contrast_id, "(?<=_)[^_]+(?=_[^_]+$)"),
+                                   levels= c( "HCMvsNF","HCMvsDCM")
+                                   ))%>%
+        filter(gene==toupper(x))
+      plot_logfc_gene(plot_df, x= "CellType", fg_name = "Comparison",  gene= x)  
+        
     })
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
@@ -241,7 +161,7 @@ output$HF_single = renderPlot({
   }
 })
 
-## magnet human 
+## human HCM bulk
 output$HFgene_regulation_magnet = renderPlot({
   if (!is.null(input$select_gene)) {
   pls= map(input$select_gene, function(x){
@@ -249,25 +169,8 @@ output$HFgene_regulation_magnet = renderPlot({
       filter(gene== toupper(x), 
              grepl("bulk", contrast_id ), 
              !grepl("DCMvsNF", contrast_id))%>%
-      mutate( sig= FDR<0.05)%>%
-      ggplot(aes(x = contrast_id , y = logFC, fill = sig)) +
-      #facet_grid(rows= vars(model))+
-      #geom_boxplot()+
-      geom_hline(yintercept = 0, color= "black")+
-      geom_col(width= 0.4, color ="black") +
-      theme_cowplot() +
-      scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                   "FALSE"="orange"))+
-      labs(x = "HF Study", y = "log fold change", fill = "FDR<0.05") +
-      theme(panel.grid.major = element_line(color = "grey",
-                                            size = 0.1,
-                                            linetype = 1),
-            panel.grid.minor = element_blank(),
-            axis.text = element_text(size= 11), 
-            axis.title = element_text(size= 10)) +
-      coord_flip()+
-      ggtitle(x)
-  })
+      plot_logfc_gene(joint_contrast_df= .,  gene= x)
+    })
   p1= cowplot::plot_grid(plotlist =  pls)
   p1
   }
@@ -277,28 +180,11 @@ output$HFgene_regulation_magnet = renderPlot({
 output$fetal_gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) )  {
     pls= map(input$select_gene, function(x){
-      contrasts %>% 
-        filter(MgiSymbol==x, 
-               model == "fetal")%>%
-        mutate(exp.group= paste(modal, tp, sep= "_"),
-               sig= FDR<0.05)%>%
-        ggplot(aes(x = exp.group, y = logFC, fill = sig)) +
-        #geom_boxplot()+
-        geom_hline(yintercept = 0, color= "black")+
-        geom_col(width= 0.4, color ="black") +
-        theme_cowplot() +
-        scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                     "FALSE"="orange"))+
-        labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
-        theme(panel.grid.major = element_line(color = "grey",
-                                              size = 0.1,
-                                              linetype = 1),
-          panel.grid.minor = element_blank(),
-          axis.text = element_text(size= 11), 
-          axis.title = element_text(size= 10)) +
-        coord_flip()+
-        ggtitle(x)
-      
+      joint_contrast_df %>% 
+        filter(gene==toupper(x), 
+               grepl("fetal", contrast_id ))%>%
+        plot_logfc_gene(joint_contrast_df= .,  gene= x)
+        
     })
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
@@ -331,7 +217,6 @@ cont_res = eventReactive(input$submit_contrast, {
   return(res)
 })
 
-
 output$cq_hist= renderPlot({
   cont_res()$p.hist
 })
@@ -339,7 +224,6 @@ output$cq_hist= renderPlot({
 output$cq_top=renderPlot({
   cont_res()$p.top_genes
 })
-
 
 output$cq_table_up= DT::renderDataTable({
  cont_res()$df %>% 
@@ -366,7 +250,6 @@ output$cq_table_up= DT::renderDataTable({
                     dom = "Bfrtip",
                     buttons = c("copy", "csv", "excel","pdf")))
 })
-
 
 output$cq_table_dn= DT::renderDataTable({
   cont_res()$df %>% 
@@ -1014,61 +897,88 @@ gs = reactive({
   }
 })
 
-contrast_enrich= reactive({
-  switch(input$contrasts_gsea,
-         "directed" = directed_signature,
-         "undirected" = undirected_signature)
-})
+# contrast_enrich= reactive({
+#   switch(input$contrasts_gsea,
+#          "directed" = directed_signature,
+#          "undirected" = undirected_signature)
+# })
 # get which signature should be used (directed vs undirected)
 signature = reactive({
-  switch(input$signature_source,
-         "murine_hypertrophy" = contrasts %>% filter(model!= fetal),
-         "human_HF" = directed_signature,
-         "human_HF_sc"= sc.gex,  
-         "fetal"= contrasts %>% filter(model=="fetal")
+  switch(input$select_contrast_enrichment,
+         "A. Animal models" = joint_contrast_df %>% filter(cc == "A"),
+         "B. Human HCM" =joint_contrast_df %>% filter(cc == "B"),
+         "C. Human HF" = joint_contrast_df%>% filter(cc == "C"),
+         "D. Fetal reprogramming"= joint_contrast_df %>% filter(cc == "D"),
          )
 })
 
+#sig = joint_contrast_df %>% filter(cc == "A")
+#gss = example_geneset
 # perform GSEA with plotting
 gsea_res = eventReactive(input$submit, {
   if (ncol(gs()) == 1) {
+    df= map(unique(signature()$contrast_id), function(x){
+      y= signature()%>% filter(contrast_id == x)
+      vect= deframe(y[,c("gene", "logFC")])
+      res = fgsea(stats= vect ,
+                  pathways= gs()$gene, 
+                  nperm = 1000)
+      as.data.frame(res)%>% mutate(cc= x)
+    }) %>% do.call(rbind,. )
     
+    p1= df %>% 
+      ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
+      geom_col()+
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      coord_flip()+
+      labs(x= "contrast ID", 
+           y= "normalized enrichment score (NES)")
     
-    
-    res = fgsea(list(geneset = gs()$gene), deframe(signature()), nperm = 1000)
-    p = make_gsea_plot(signature(), gs(), weight)
   } else if (ncol(gs()) == 2) {
-    list_gs = gs() %>%
+    list_gs = gs()%>%
       split(.$geneset) %>%
       map(pull, gene)
-    res = fgsea(list_gs, deframe(signature()), nperm = 1000)
+    df= map(unique(signature()$contrast_id), function(x){
+      y= signature()%>% filter(contrast_id == x)
+      vect= deframe(y[,c("gene", "logFC")])
+      res = fgsea(stats= vect ,
+                  pathways= list_gs, 
+                  nperm = 1000)
+      as.data.frame(res)%>% mutate(cc= x)
+    }) %>% do.call(rbind,. )
     
-    plot_df = gs() %>%
-      nest(set = gene) %>%
-      mutate(plot = pmap(., .f = function(geneset, set, ...) {
-        make_gsea_plot(signature(), set, weight)
-      }))
-    
-    p = plot_grid(plotlist = plot_df$plot, labels = plot_df$geneset)
+    p1= df %>% 
+      ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
+      geom_col()+
+      facet_grid(rows= vars(pathway))+
+      scale_fill_manual(values = c("TRUE" = "darkgreen",
+                                   "FALSE"="orange"))+
+      coord_flip()+
+      labs(x= "contrast ID", 
+           y= "normalized enrichment score (NES)")
   }
   
-  df = res %>% 
-    rename(geneset = pathway) %>%
+df = df %>% 
+  dplyr::select(cc, everything())%>%
+  dplyr::rename(geneset = pathway,
+                contrast_ID = cc) %>%
     as_tibble() %>%
     select(-leadingEdge) %>%
     mutate(signature = input$signature_source)
   
-  list(df = df, p = p)
+  list(df = df, p = p1)
 })
 
 # gsea results as table
 output$gsea_res_table = DT::renderDataTable({
-  gsea_res()$df %>%
+  gsea_res()$df%>%
+  #df%>%
     mutate(NES = signif(NES, 3),
            ES = signif(ES, 3),
            pval = scientific(pval),
            padj = scientific(padj)) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = "none"),
+    DT::datatable(escape=F, filter = "top", selection = list(target = "column"),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
                                 autoWidth = T, 

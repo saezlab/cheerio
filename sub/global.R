@@ -35,7 +35,7 @@ theme_set(theme_cowplot())
 
 #gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
 ##hypertrophy mice
-contrasts = readRDS("data/contrasts.hypertrophy.rds")
+#contrasts = readRDS("data/contrasts.hypertrophy.rds")
 #tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
 
 

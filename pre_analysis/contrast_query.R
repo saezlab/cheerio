@@ -74,7 +74,11 @@ PE= readRDS("raw_data/invitro_PE/contrast_df.rds")%>%
 joint_contrast_df= rbind(contrast_df, reheat.r, sc.gex2, contrast_m, PE)
 
 joint_contrast_df <-
-joint_contrast_df %>% group_by(contrast_id) %>% 
+joint_contrast_df %>% 
+  group_by(contrast_id) %>% 
+  mutate(min.FDR = min(FDR[FDR > 0]),  ## modify FDR values that are INF to smallest non-zero FDR within that contrast
+         FDR_mod= ifelse(FDR== 0, min.FDR, FDR), # replace this
+         new_weight= sign(logFC)*-log10(FDR_mod))%>% ## calculate a weight based on signed -log10FDR 
   mutate(ranks1= sign(logFC)*-log10(FDR),
          ranks2= rank(-ranks1),
          max.ranks= max(ranks2), 
@@ -85,7 +89,7 @@ joint_contrast_df %>% group_by(contrast_id) %>%
 
 unique(joint_contrast_df$contrast_id)
 
-joint_contrast_df= 
+joint_contrast_df = 
   joint_contrast_df %>% 
   mutate(cc= ifelse(grepl("Rn|Mm", contrast_id), "A", "C") ,
          cc= ifelse(grepl("fetal", contrast_id), "D", cc),

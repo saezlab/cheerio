@@ -12,9 +12,9 @@
 
 
 library(tidyverse)
-
-
+library(cowplot)
 library(ggrepel)
+
 c.df= readRDS("data/contrasts_query_df.rds")
 
 unique(c.df$contrast_id)
@@ -77,7 +77,8 @@ rank.matrix=rank.df %>%
 
 #rank.matrix
 dim(rank.matrix)
-
+r.m= apply(rank.matrix, 2, scale)
+rownames(r.m)= rownames(rank.matrix)
 r.m= scale(rank.matrix, center = T, scale= T)
 #apply(r.m, 2, hist)
 
@@ -98,6 +99,7 @@ p.df %>%
   ggtitle(paste0(""))+
   geom_label_repel(aes(label= c.id))+
   theme_cowplot()
+
 p.df %>% 
   ggplot(., aes(x= PC3, y= PC4, color= c.id))+
   geom_point(size= 3) +
@@ -127,7 +129,7 @@ rank.matrix["STAT3",]
 hist(PCA$rotation[,1], breaks = 20)
 hist(PCA$rotation[,2], breaks = 20)
 
-
+PCA$rotation
 p.pcaloadingS= PCA$rotation[,1:4] %>% 
   as_data_frame() %>% 
   mutate(gene= rownames(PCA$rotation))
@@ -142,7 +144,7 @@ p.pcaloadingS %>%
   mutate(mm= (PC1< -0.05 ) & (PC2< -0.1),
          hs= (PC1< -0.05 ) & (PC2> -0.05), 
          label= ifelse(hs | mm, gene, ""))%>%
-  ggplot(., aes(x= PC3, y= PC4))+
+  ggplot(., aes(x= PC1, y= PC2))+
   geom_point()+
   geom_label_repel(aes(label= label))
 

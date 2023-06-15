@@ -69,10 +69,22 @@ ui = function(request) {
                      h5("Ribo-seq and RNA-seq correlation"),
                      plotOutput("cardiac_hyper_corr"),
                      
+                     
+                     
                      br(),
                      br(),
                      br(),
-                     hr()
+                     hr(),
+                     
+                     ##ipmc table
+                     
+                    h4("Table of consistently dysregulated gene(s)"),
+                    DT::dataTableOutput("IPMC_table")
+                   #  tabsetPanel(
+                   #   type = "tabs",
+                   #   tabPanel("assos",
+                   #            DT::dataTableOutput("IPMC_table"))
+                   # )
                      ),
             tabPanel("B. Human Hypertrophic Cardiomyopathy", 
                      ##Magnet

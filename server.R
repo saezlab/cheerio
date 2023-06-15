@@ -77,6 +77,26 @@ output$gene_expression_plots = renderPlot({
   }
 })
 
+#IPMC_data
+
+output$IPMC_table= DT::renderDataTable({
+ ipmc_data %>%
+    filter(Gene %in% (input$select_gene))%>%
+    
+    select(Gene, Allele, Cardiac_Hypertrophy, `P Value`, Other_Phenotypes, IPMC_link)%>%
+    DT::datatable(
+      escape=F, filter = "top",
+      selection = "none",
+      extensions = "Buttons",
+      rownames = F,
+      options = list(scrollX = T,
+                     autoWidth = T,
+                     dom = "Bfrtip",
+                     buttons = c("copy", "csv", "excel","pdf"))
+      )
+})
+
+
 ## reheat (human HF): 
 output$HFgene_regulation_boxplot = renderPlot({
   if (!is.null(input$select_gene) ) {
@@ -779,17 +799,17 @@ output$human_fetalDT = DT::renderDataTable({
                                 buttons = c("copy", "csv", "excel")))
 })
 
-output$human_scDT = DT::renderDataTable({
-  sc.gex %>%
-    mutate(Comparison= factor(Comparison),
-           CellType= factor(CellType)) %>%
-    DT::datatable(escape=F, filter = "top", selection = "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
+#output$human_scDT = DT::renderDataTable({
+  # sc.gex %>%
+  #   mutate(Comparison= factor(Comparison),
+  #          CellType= factor(CellType)) %>%
+  #   DT::datatable(escape=F, filter = "top", selection = "multiple",
+  #                 extensions = "Buttons", rownames = F,
+  #                 option = list(scrollX = T,
+  #                               autoWidth = T,
+  #                               dom = "Bfrtip",
+  #                               buttons = c("copy", "csv", "excel")))
+#})
 
 
 }

@@ -33,14 +33,16 @@ theme_set(theme_cowplot())
 
 # load static data
 
-#gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
+gex.obj= readRDS("data/GEX.list.hypertrophy.rds")
+
+
 ##hypertrophy mice
 #contrasts = readRDS("data/contrasts.hypertrophy.rds")
 #tf_hypertrophy = readRDS("data/dorothea_hypertrophyMM.rds")
 
 
 #sc chaffin dcm, hcm
-# sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
+# sc.gex= read.csv("data/sc_gex_chaffin.csv")%>%
 #   as_tibble()%>%
 #   mutate(Significant= factor(ifelse(Significant==1, TRUE, FALSE)),
 #          Comparison= str_replace(Comparison, "vs", "vs\n"),
@@ -50,14 +52,6 @@ theme_set(theme_cowplot())
 contrasts_HF = readRDS("data/study_contrasts.rds")
 ranks = readRDS("data/study_ranks.rds")
 directed_signature = readRDS("data/signature.rds")
-# undirected_signature = readRDS("data/fisher_signature.rds")
-
-#overview = readRDS("data/study_overview.rds")
-#progeny = readRDS("data/PROGENy_results.rds")
-#dorothea = readRDS("data/dorothea_results.rds")
-#gsea = readRDS("data/GSEA_results.rds")
-#mi_gsea = readRDS("data/GSEA_mir_results.rds")
-
 
 #example
 example_geneset = read_csv("data/multiple_geneset.csv")
@@ -77,5 +71,6 @@ TFs= sapply(df_tf, function(x){
   unique(toupper(x$source))
 })%>% unlist(use.names = F)%>% unique()
 
+ipmc_data= readRDS("data/ipmc_data.rds")
 
 

@@ -190,3 +190,72 @@ plot_logfc_gene = function(joint_contrast_df,
   if(!is.null(fg_name)){p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")}
   p1
 }
+
+
+
+
+plot_hw_association= function(HW_DF, 
+                              genes,
+                              my.formula = y~x){
+  p= map(genes , function(x){
+    #map(c("rna", "ribo"), function(y){
+    HW_DF %>%
+      filter(MgiSymbol == x )%>%
+      ggplot(., aes(x= HW_BW, y= exp, color= model))+
+      geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
+      facet_grid(rows= vars(modal), scales="free_y")+
+      stat_smooth(fullrange = T, method = "lm", formula = my.formula, se = F, linewidth= 0.4) +
+      stat_poly_eq(aes(label = paste(after_stat(rr.label))), 
+                   label.x = "left", label.y = "top",
+                   formula = my.formula, parse = TRUE, size = 4)+
+      stat_fit_glance(method = 'lm',
+                      method.args = list(formula =my.formula),
+                      geom = 'label_repel', 
+                      aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
+                      label.x = 'right', label.y = "top", size = 4, alpha= 0.7)+
+      ggtitle(x)+
+      scale_color_manual(values = c("swim" = "darkblue",
+                                    "tac"="darkred", 
+                                    drop= FALSE))+
+      labs(y= "Normalized gene expression",
+           x= "Normalized heart weight", 
+           shape= "Experimental\ngroup")+
+      theme(panel.grid.major = element_line(color = "grey",
+                                            linewidth = 0.1,
+                                            linetype = 1),
+            panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+            panel.grid.minor = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10)) 
+  })
+  
+  p1= cowplot::plot_grid(plotlist = p)
+  p1
+}
+
+
+plot_transcipt_translat_corr= function(plot.df 
+){
+  plot.df %>% 
+  ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
+    facet_grid(rows= vars(model), 
+               cols= vars(timepoint))+
+    geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
+    geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
+    geom_point(show.legend = T)+
+    scale_colour_manual("genes", values= myColors)+
+    geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+    scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+    scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
+    #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
+    theme(panel.grid.major = element_line(color = "grey",
+                                          linewidth = 0.1,
+                                          linetype = 1),
+          panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) +
+    labs(alpha= "")+
+    xlab("logFC - transcriptome")+
+    ylab("logFC - translatome")
+}

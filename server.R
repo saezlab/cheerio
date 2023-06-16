@@ -4,26 +4,36 @@ server = function(input, output, session) {
 #### Query genes ####
 
   ## reset the gene input button:
-  observeEvent(input$reset_input, {
+ observeEvent(input$reset_input, {
     updatePickerInput(session,
                       inputId = "select_gene", selected = character(0)
     )
   })
-  
+
+  #input = list(select_gene =c("Nppa"))
 # cardiac mouse hypertrophy show correlation between transcript and translatome:  
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) ){
-    
-    plot.df= contrasts %>%
-      filter(model!= "fetal")%>%
-      dplyr::select(-PValue, -FDR)%>%
-      pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
-      mutate(labels= ifelse(MgiSymbol %in% input$select_gene, MgiSymbol, "background"),
+    plot.df= joint_contrast_df %>% 
+      ungroup()%>%
+      filter( grepl(pattern = "Mm|Rn", contrast_id))%>%
+      mutate(gene= str_to_title(gene),
+            model= factor(ifelse(grepl("tac", contrast_id), "tac", 
+                                  ifelse(grepl("swim", contrast_id ),
+                                         "swim", 
+                                         "invitro")),levels= c("swim", "tac", "invitro")), 
+             modality = factor(ifelse(grepl("rna", contrast_id), "transcriptome", "translatome")), 
+             timepoint = factor(ifelse(grepl("2d", contrast_id), "2d", 
+                                       ifelse(grepl("2wk", contrast_id), "2wk","none" ))) )%>% 
+      select( model,modality, timepoint,gene, logFC)%>%
+      pivot_wider(names_from= modality, values_from = logFC, values_fn= mean)%>%
+      mutate(labels= ifelse(gene %in% input$select_gene, gene, "background"),
              labels= factor(labels, levels= c(input$select_gene, "background")),
              alphas= factor(ifelse(labels=="background", "bg","normal"))
       )%>%
       arrange(desc(labels))
-    
+  
+
       if(length(input$select_gene)==2){
         myColors <- c("green", "blue", "grey")
       }else if(length(input$select_gene)==1){
@@ -31,13 +41,17 @@ output$cardiac_hyper_corr = renderPlot({
       }else{
         myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
       }
+    
+      myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
       names(myColors) <- levels(plot.df$labels)
       
       
       p1= plot.df %>% 
-        ggplot(aes(x= rna, y= ribo, color = labels, size= alphas, alpha= alphas))+
+        filter(model!= "invitro")%>%
+        drop_na()%>%
+        ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
         facet_grid(rows= vars(model), 
-                   cols= vars(tp))+
+                   cols= vars(timepoint))+
         geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
         geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
         geom_point(show.legend = T)+
@@ -47,12 +61,45 @@ output$cardiac_hyper_corr = renderPlot({
         scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
         #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
         theme(panel.grid.major = element_line(color = "grey",
-                                              size = 0.1,
-                                              linetype = 1))+
+                                              linewidth = 0.1,
+                                              linetype = 1),
+              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+              panel.grid.minor = element_blank(),
+              axis.text = element_text(size= 11), 
+              axis.title = element_text(size= 10)) +
         labs(alpha= "")+
         xlab("logFC - transcriptome")+
         ylab("logFC - translatome")
-      p1
+      
+      p2= plot.df %>% 
+        drop_na()%>%
+        filter(model== "invitro")%>%
+        ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
+        facet_grid(rows= vars(model))+
+        geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
+        geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
+        geom_point(show.legend = T)+
+        scale_colour_manual("genes", values= myColors)+
+        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+        scale_size_manual(values=c("bg"= 0.5, "normal"= 2.5), guide = 'none')+
+        #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
+        theme(panel.grid.major = element_line(color = "grey",
+                                              linewidth = 0.1,
+                                              linetype = 1),
+              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+              panel.grid.minor = element_blank(),
+              axis.text = element_text(size= 11), 
+              axis.title = element_text(size= 10),
+              legend.position = "none") +
+        labs(alpha= "")+
+        xlab("logFC - transcriptome")+
+        ylab("logFC - translatome")
+      
+      p= plot_grid(plot_grid(p2,NULL, ncol= 1),p1, ncol = 2, 
+                   rel_widths = c(1,2.5),
+                   labels= "AUTO")
+      return(p)
   }
 })
 
@@ -77,13 +124,19 @@ output$gene_expression_plots = renderPlot({
   }
 })
 
-#IPMC_data
+# Mouse heart weight: 
 
+output$heart_weight_plot= renderPlot({
+  if (!is.null(input$select_gene) )  {
+    plot_hw_association(HW_DF, input$select_gene)
+  }
+})
+
+#IPMC_data
 output$IPMC_table= DT::renderDataTable({
  ipmc_data %>%
     filter(Gene %in% (input$select_gene))%>%
-    
-    select(Gene, Allele, Cardiac_Hypertrophy, `P Value`, Other_Phenotypes, IPMC_link)%>%
+    select(Gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
     DT::datatable(
       escape=F, filter = "top",
       selection = "none",
@@ -95,7 +148,6 @@ output$IPMC_table= DT::renderDataTable({
                      buttons = c("copy", "csv", "excel","pdf"))
       )
 })
-
 
 ## reheat (human HF): 
 output$HFgene_regulation_boxplot = renderPlot({
@@ -751,24 +803,9 @@ output$mouse_hypertrophyDT = DT::renderDataTable( {
   
 })
 
-output$human_HF_bulk_indDT = DT::renderDataTable({
-  contrasts_HF %>%
-    mutate(AveExpr = signif(AveExpr,3),
-           logFC = signif(logFC,3),
-           t = signif(t,3),
-           B = signif(B,3),
-           P.Value = scientific(P.Value),
-           adj.P.Val = scientific(adj.P.Val),
-           study = as_factor(study)) %>%
-    DT::datatable(escape=F, filter = "top", selection =  "multiple",
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
 
 output$human_HF_bulk_summDT = DT::renderDataTable({
+  
   ranks %>%
     mutate(mean_lfc = signif(mean_lfc,3),
            mean_t = signif(mean_t,3),
@@ -782,34 +819,40 @@ output$human_HF_bulk_summDT = DT::renderDataTable({
   })
 
 output$human_fetalDT = DT::renderDataTable({
-  contrasts %>%
-    select(tp, MgiSymbol, logFC, FDR)%>%
-    filter(grepl("fetal", tp))%>%
+  joint_contrast_df%>%
+    select(contrast_id, gene, logFC, FDR,sig)%>%
+    filter(grepl("fetal", contrast_id))%>%
     mutate(logFC = signif(logFC,3),
            FDR = scientific(FDR),
-           #model = as_factor(model),
-           #modal = as_factor(modal),
-           tp = as_factor(tp)) %>%
-    rename(fetal_study= tp)%>%
+           contrast_id = as_factor(contrast_id)) %>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
                                 autoWidth = T,
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))
+  
+  
 })
 
-#output$human_scDT = DT::renderDataTable({
-  # sc.gex %>%
-  #   mutate(Comparison= factor(Comparison),
-  #          CellType= factor(CellType)) %>%
-  #   DT::datatable(escape=F, filter = "top", selection = "multiple",
-  #                 extensions = "Buttons", rownames = F,
-  #                 option = list(scrollX = T,
-  #                               autoWidth = T,
-  #                               dom = "Bfrtip",
-  #                               buttons = c("copy", "csv", "excel")))
-#})
+output$human_HCMDT = DT::renderDataTable({
+  
+  joint_contrast_df%>% 
+    filter(grepl(pattern="HCM", contrast_id) )%>%
+    mutate(modality= factor(ifelse(grepl("bulk", contrast_id),"bulk", "single_cell")))%>%
+    mutate(logFC = signif(logFC,3),
+         FDR = scientific(FDR),
+         contrast_id = as_factor(contrast_id)) %>%
+    select(modality, contrast_id, gene, logFC, FDR,sig)%>%
+    DT::datatable(escape=F, filter = "top", selection = "multiple",
+                                 extensions = "Buttons", rownames = F,
+                                 option = list(scrollX = T,
+                                               autoWidth = T,
+                                               dom = "Bfrtip",
+                                               buttons = c("copy", "csv", "excel")))
+    
+
+})
 
 
 }

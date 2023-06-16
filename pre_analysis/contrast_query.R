@@ -84,7 +84,8 @@ joint_contrast_df %>%
          max.ranks= max(ranks2), 
          ranks3= ranks2/max.ranks, 
          gene = toupper(gene),
-         sig= FDR<0.05)
+         sig= FDR<0.05, 
+         sig= ifelse(grepl("Rn|Mm", contrast_id) & logFC<log2(1.5), FALSE, sig)) # as discussed we add this 
 
 
 unique(joint_contrast_df$contrast_id)

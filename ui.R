@@ -7,15 +7,14 @@ ui = function(request) {
     rclipboardSetup(),
     #tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
     useShinyjs(),
-    HTML("<script src='https://cdn.drugst.one/latest/drugstone.js'></script>",
-         "<link rel='stylesheet' href='https://cdn.drugst.one/latest/styles.css'>"),
-    #tags$script(src= "https://cdn.drugst.one/latest/drugstone.js"),
-    #tags$head(includeScript("google-analytics.js")),
+    # HTML("<script src='https://cdn.drugst.one/latest/drugstone.js'></script>",
+    #      "<link rel='stylesheet' href='https://cdn.drugst.one/latest/styles.css'>"),
+    
     navbarPage(
       id = "menu", 
       title = div(img(src="logo_saezlab.png", width="25", height="25"),
-                  "CHROMA"),
-      windowTitle = "Murine Cardiac Hypertrophy",
+                  "CHEERIO"),
+      windowTitle = "CHEERIO",
       collapsible=T,
       
       #### Welcome ####
@@ -38,11 +37,11 @@ ui = function(request) {
           includeMarkdown("inst/query_genes_sidebar.md"),
           pickerInput(inputId = "select_gene", 
                       label = "Select gene(s)",
-                      choices = sort(unique(contrasts$MgiSymbol)), 
+                      choices = str_to_title(sort(unique(joint_contrast_df$gene))), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
                                      size=10, `max-options` = 10),
-                      selected = c("Nppb", "Nppa", "Postn", "Col1a1", "Myh7", "Myh6" ) 
+                      selected = c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" ) 
                       ),
           
           actionButton("reset_input", "Reset genes")
@@ -59,7 +58,8 @@ ui = function(request) {
             tabPanel("A. Animal models",
                      h3("Regulation in Murine Cardiac Hypertrophy models"),
                      h5("Gene expression regulation"),
-                     plotOutput("gene_expression_plots"),#, width = "100%", height = "600px"),
+                     plotOutput("gene_expression_plots")%>%
+                       withSpinner(),#, width = "100%", height = "600px"),
                      p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
                swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
                      
@@ -67,7 +67,8 @@ ui = function(request) {
                      br(),
                      
                      h5("Ribo-seq and RNA-seq correlation"),
-                     plotOutput("cardiac_hyper_corr"),
+                     plotOutput("cardiac_hyper_corr")%>%
+                       withSpinner(),
                      
                      
                      
@@ -76,21 +77,31 @@ ui = function(request) {
                      br(),
                      hr(),
                      
+                     #hw
+                     h3("Phenotype associations"),
+                     br(),
+                     h4("Explore posible associations of genetic variants with mouse phenotypes"),
+                     p(br()),
+                     plotOutput("heart_weight_plot", width = "100%", height = "800px")%>%
+                       withSpinner(),
+                     br(),
+                     hr(),
+                    
                      ##ipmc table
-                     
-                    h4("Table of consistently dysregulated gene(s)"),
-                    DT::dataTableOutput("IPMC_table")
-                   #  tabsetPanel(
-                   #   type = "tabs",
-                   #   tabPanel("assos",
-                   #            DT::dataTableOutput("IPMC_table"))
-                   # )
+                    
+
+                    h4("Explore posible associations of genetic variants with mouse phenotypes"),
+
+                    DT::dataTableOutput("IPMC_table")%>%
+                      withSpinner(),
+                   hr()
                      ),
             tabPanel("B. Human Hypertrophic Cardiomyopathy", 
                      ##Magnet
                      h4("Regulation on bulk level"),
                      
-                     plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px"),
+                     plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px")%>%
+                       withSpinner(),
                      p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
                      br(),
                      br(),
@@ -251,8 +262,8 @@ tabPanel(
     HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr </a> 
         from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
         </p> "),
-    HTML("<p> 2c. To explore possible gene network based drug interactions, tissue expression and related disorders go to <a href='https://drugst.one/standalone'> Drugst.one </a> 
-       and paste the genes into the network input field.
+    HTML("<p> 2c. To explore possible gene network based drug interactions, tissue expression and related disorders go to <a href='https://drugst.one/standalone'> Drugst.one </a> f
+      from th the <a href='https://www.cosy.bio/'> Baumbachlab </a> and paste the genes into the network input field.
         </p> "),
     p("3. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
     br(),
@@ -261,11 +272,13 @@ tabPanel(
      
   )
 ),
-tabPanel(
-  title = "Test drugst.one",
-  icon = icon("chart-line"),
-  HTML( "<drugst-one id='drugstone-component-id'></drugst-one>")
-),
+
+## old, used drugst.one intersect
+# tabPanel(
+#   title = "Test drugst.one",
+#   icon = icon("chart-line"),
+#   HTML( "<drugst-one id='drugstone-component-id'></drugst-one>")
+# ),
       
       #### Functional analysis ####
 tabPanel(
@@ -434,21 +447,18 @@ tabPanel(
           h6("Select your desired contrast, explore and sort data in table format or download"),
           tabsetPanel(
             type = "tabs",
-            tabPanel("Murine Hypertrophy", DT::dataTableOutput("mouse_hypertrophyDT"),
+            tabPanel("A. Animal Models", DT::dataTableOutput("mouse_hypertrophyDT"),
                      br(), p("Download full data from zenodo, LINK")),
-            tabPanel("Human HF Bulk individual",  DT::dataTableOutput("human_HF_bulk_indDT"),
+            tabPanel("B. Human HCM", DT::dataTableOutput("human_HCMDT"),
                      br(), p("Download full data from zenodo, LINK")),
-            tabPanel("Human HF Bulk summary",  DT::dataTableOutput("human_HF_bulk_summDT"),
+           tabPanel("C. Human HF",  DT::dataTableOutput("human_HF_bulk_summDT"),
                      br(), p("Download full data from zenodo, LINK")),
-            tabPanel("Human HF single cell", DT::dataTableOutput("human_scDT"),
-                     br(), p("Download full data from zenodo, LINK")),
-            tabPanel("Human fetal bulk", DT::dataTableOutput("human_fetalDT"),
+            tabPanel("D. Fetal gene program", DT::dataTableOutput("human_fetalDT"),
                      br(), p("Download full data from zenodo, LINK"))
           ),
           br(), 
           hr(),
-          h6("*Human HF Bulk individual: Contains single study results from ReHeaT"),
-          h6("*Human HF Bulk summary: Contains consensus ranking (summary of single studies) results from ReHeaT")
+          
         )
       ),
       

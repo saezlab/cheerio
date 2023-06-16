@@ -10,7 +10,10 @@
 ##
 ## prepare phenotype data
 
-
+library(tidyverse)
+library(ggpmisc)
+library(broom)
+library(ggrepel)
 
 obj.list= readRDS("data/GEX.list.hypertrophy.rds")
 
@@ -34,7 +37,7 @@ single.sample.exp= lapply(obj.list, function(mod){
 single.sample.exp = single.sample.exp %>% 
   mutate(sid= str_replace_all(sid, "_CPM", ""))%>%
   mutate(id_clean= substr(sid, nchar(sid)-2, nchar(sid)))
-single.sample.exp
+
 unique(single.sample.exp$sid)
 
 pheno.data= read_csv("raw_data/pheno/Updated batches_TAC_Swim_revision sorted_mod.csv")
@@ -47,22 +50,26 @@ pheno.data2= pheno.data %>%
 
 
 HW_DF= single.sample.exp %>% left_join(pheno.data2, by= "id_clean")%>%
-  mutate(exp= as.numeric(exp))
+  mutate(exp= as.numeric(exp),
+         exp.group= ifelse(grepl("sham|sedent", sid), "ct", "exp"),
+         exp.group= paste0(exp.group, "_", tp),
+         modal= factor(paste0(toupper(modal), "seq"), levels= c("RNAseq", "RIBOseq"))
+         )
+
+saveRDS(HW_DF, "data/heart_weight_gex.rds")
 
 genes= c("Mylk4", "Nppa")
-library(ggpmisc)
-library(broom)
+x= "Nppa"
+my.formula <- y~x
 map(genes , function(x){
   #map(c("rna", "ribo"), function(y){
   HW_DF %>%
-    filter(MgiSymbol == x
-           )%>%
-    #plot_dataframe(., "HW_BW", "exp", "modal", "model")
+    filter(MgiSymbol == x )%>%
     ggplot(., aes(x= HW_BW, y= exp, color= model))+
-    geom_point(aes(shape= tp), size = 4)+
+    geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
     facet_grid(rows= vars(modal), scales="free_y")+
-    stat_smooth(method = "lm", formula = my.formula, se = T) +
-    stat_poly_eq(aes(label = paste(..rr.label..)), 
+    stat_smooth(fullrange = T, method = "lm", formula = my.formula, se = F, linewidth= 0.4) +
+    stat_poly_eq(aes(label = paste(after_stat(rr.label))), 
                 label.x = "left", label.y = "top",
                formula = my.formula, parse = TRUE, size = 4)+
      stat_fit_glance(method = 'lm',
@@ -76,8 +83,23 @@ map(genes , function(x){
     #                 aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
     #                 label.x.npc = 'right', label.y.npc = 0.35, size = 3)+
     #geom_smooth(method = "lm")+
-    ggtitle(x)
+    ggtitle(x)+
+    scale_color_manual(values = c("swim" = "darkblue",
+                                 "tac"="darkred", 
+                                 drop= FALSE))+
+    labs(y= "Normalized gene expression",
+         x= "Normalized heart weight", 
+         shape= "Experimental group\n(treatment_timepoint)")+
+    theme(panel.grid.major = element_line(color = "grey",
+                                          linewidth = 0.1,
+                                          linetype = 1),
+          panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size= 11), 
+          axis.title = element_text(size= 10)) 
     })
+
+
 library(ggrepel)
 my.formula <- y~x
 library(scales)

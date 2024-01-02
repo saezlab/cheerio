@@ -23,27 +23,29 @@ contrast_focus= c("Mm_tac_rna_2wk",
                   "Mm_swim_rna_2d", 
                   "Mm_tac_rna_2d", "Hs_fetal_Akat14", "Hs_ReHeaT",
                   "Hs_fetal_Spurell22", 
-                  #"Rn_invitro_ribo",
+                  "Rn_invitro_ribo",
                   "Rn_invitro_rna", 
                   "Hs_singlecell_HCMvsNF_Cardiomyocyte",
                   #"Hs_singlecell_HCMvsNF_Endothelial I",
                  # "Hs_singlecell_HCMvsNF_Macrophage",
-                  "Hs_bulk_HCMvsNF"
-                  #"Hs_singlecell_HCMvsNF_Fibroblast"
+                  "Hs_bulk_HCMvsNF",
+                  "Hs_singlecell_HCMvsNF_Fibroblast"
                  )
 
 contrast_focus= c("Mm_tac_rna_2wk", 
                   "Mm_swim_rna_2wk", 
                   "Mm_swim_rna_2d", 
-                  "Mm_tac_rna_2d", "Hs_fetal_Akat14", "Hs_ReHeaT",
+                  "Mm_tac_rna_2d", 
+                  "Hs_fetal_Akat14",
+                  "Hs_ReHeaT",
                   "Hs_fetal_Spurell22", 
                   #"Rn_invitro_ribo",
                   #"Rn_invitro_rna", 
-                  #"Hs_singlecell_HCMvsNF_Cardiomyocyte",
+                  "Hs_singlecell_HCMvsNF_Cardiomyocyte",
                   #"Hs_singlecell_HCMvsNF_Endothelial I",
                   # "Hs_singlecell_HCMvsNF_Macrophage",
-                  "Hs_bulk_HCMvsNF",
-                  "Hs_singlecell_HCMvsNF_Fibroblast"
+                  "Hs_bulk_HCMvsNF"
+                  #"Hs_singlecell_HCMvsNF_Fibroblast"
 )
 
 
@@ -89,8 +91,8 @@ p.df= PCA$x %>%
   as_tibble()
 
 plot_pca= function(p.df, 
-                   pc_x, 
-                   pc_y){
+                   pc_x= 1, 
+                   pc_y= 2){
   
   x_col= paste0("PC", pc_x)
   y_col= paste0("PC", pc_y)
@@ -100,15 +102,15 @@ plot_pca= function(p.df,
     theme_minimal()+
     labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
          y= paste(y_col, " (",as.character(round(PCA$sdev[pc_y]^2/sum(PCA$sdev^2)*100)),"%)"))+
-    ggtitle(paste0(""))+
-    geom_label_repel(aes(label= c.id))+
-    theme_cowplot()
+    ggtitle(paste0(""))
+    #geom_label_repel(aes(label= c.id))
+    #theme_cowplot()
 }
 
 p1= plot_pca(p.df, 1,2)
 p2= plot_pca(p.df, 3,4)
 p3= plot_pca(p.df, 5,6)
-
+p1
 plot_grid(p1,p2,p3)
 
 map(PCA$sdev, function(x){
@@ -144,23 +146,33 @@ p.pcaloadings %>%
   mutate(mm= (PC1 < -0.03 ) & (PC2 < 0.03),
          hs= (PC1 < -0.03 ) & (PC2 > 0.03), 
          label= ifelse(hs | mm, gene, ""),
-         prio= -(PC1)*abs(PC2))%>%
+         prio= -(PC1)*abs(PC2),
+         prio2= -PC1* (1-PC2))%>%
   #pull(prio)%>% hist()
 
-  ggplot(., aes(x= PC1, y= PC2, color= prio))+
+  ggplot(., aes(x= PC1, y= PC2, color= prio2))+
   geom_point()+
   geom_label_repel(aes(label= label))+
   theme_cowplot()+
   scale_color_gradient2(low= "black",mid= "darkgrey", high = "red")
 
-r.m["XIRP2",] %>% enframe(name = "contrast_id")%>%
+r.m["SCUBE2",] %>% enframe(name = "contrast_id")%>%
   left_join(c.df %>% distinct(cc, contrast_id))%>%
   ggplot(., aes(x= cc, y= value))+
   geom_boxplot()+
   geom_jitter(aes(color= contrast_id))
-r.m["PHLDA1",]
+r.m["CENPA",]
 
+#get genes that associate with hypertrophy but not w species
 
+p.pcaloadings %>% 
+  mutate(mm= (PC1 < -0.03 ) & (PC2 < 0.03),
+         hs= (PC1 < -0.03 ) & (PC2 > 0.03), 
+         label= ifelse(hs | mm, gene, ""),
+         prio= -(PC1)*abs(PC2),
+         prio2= -PC1* (1-PC2))%>%
+  arrange(desc(prio))%>%
+  slice_head(n= 20)%>% pull(gene)
 
 # pc1.df= enframe(sort(PCA$rotation[,1:2]))%>% arrange(desc(abs(value)))
 # 
@@ -175,7 +187,7 @@ r.m["PHLDA1",]
 
 # interpret pc2 -----------------------------------------------------------
 
-msigDB= readRDS("/home/jan/R-projects/sc_hfpef/data/prior_knowledge/Genesets_Dec19.rds")
+msigDB= readRDS("/home/jan/R-projects/scell_hfpef/data/prior_knowledge/Genesets_Dec19.rds")
 library(decoupleR)
 
 loadings.pca= p.pcaloadings%>% as.data.frame()%>%
@@ -209,9 +221,10 @@ px= msig_res %>% mutate(p_adj= p.adjust(p_value)) %>%
   geom_col(aes(color= p_adj<0.01))+
   scale_color_manual(values= c("TRUE"= "black", "FALSE"= "white"))+
   theme_cowplot()+
+  theme(axis.text.y = element_text(size=10))+
   geom_vline(xintercept = 0)
-
-pdf("big_pc_hmap.pdf",width= 20, height= 25)
+px
+pdf("big_pc_hmap.pdf_2",width= 20, height= 15)
 px
 dev.off()
 

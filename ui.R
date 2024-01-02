@@ -37,11 +37,11 @@ ui = function(request) {
           includeMarkdown("inst/query_genes_sidebar.md"),
           pickerInput(inputId = "select_gene", 
                       label = "Select gene(s)",
-                      choices = str_to_title(sort(unique(joint_contrast_df$gene))), 
+                      choices = (sort(unique(joint_contrast_df$gene))), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
                                      size=10, `max-options` = 10),
-                      selected = c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" ) 
+                      selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
                       ),
           
           actionButton("reset_input", "Reset genes")
@@ -158,7 +158,7 @@ ui = function(request) {
 
 # Query contrasts -----------------------------------------------------------------------------
 tabPanel(
-  title = "Query contrasts",
+  title = "Custom Signature",
   icon = icon("compress-alt"),
   sidebarPanel(
     includeMarkdown("inst/query_contrasts_sidebar.md"),
@@ -209,6 +209,10 @@ tabPanel(
     sliderInput("cut_off_genes", "3. Select number of genes to plot:",
                 min = 1, max = 40,
                 value = 10, step= 1),
+    hr(),
+    sliderInput("missing_prop", "4. Select % of contrasts to report a gene:",
+                min = 0, max = 100,
+                value = 70, step= 10),
     br(), 
     strong("4. Compare contrasts!"), 
     br(), 

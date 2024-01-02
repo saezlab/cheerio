@@ -18,11 +18,6 @@ library(tidyverse)
 dat= read_tsv("raw_data/pheno/IMPC/IMPC_Cardiovascular_System.tsv")
 dat
 
-unique(dat$Phenotype)
-View(dat)
-unique(dat$Parameter)
-
-
 impc_data = dat%>% 
   mutate(Cardiac_Hypertrophy= factor(ifelse(Phenotype %in% c("decreased heart weight", "increased heart weight"), Phenotype, "-")), 
          Other_Phenotypes= factor(ifelse(Cardiac_Hypertrophy == "-", Phenotype, "-")))%>%
@@ -42,11 +37,22 @@ ipmc_data2= impc_data %>%
   mutate(median_p_val= scientific(median_p_val))
 
 
-ipmc_data2%>% filter(Gene== "Mybpc3")
+source("utils_pre_analysis.R")
+
+hs_res= translate_species_to_hs("Mus musculus", ipmc_data2$Gene)
+
+ipmc_data2= ipmc_data2%>%
+  filter(Gene %in% hs_res$genes$oto)%>%
+  rename(gene_orig = Gene)%>%
+  #dplyr::select(-gene)%>%
+  left_join(hs_res$df%>%
+              distinct(gene_symbol, human_gene_symbol)%>%
+              rename(gene_orig= gene_symbol,
+                     gene= human_gene_symbol))
+
 
 ipmc_data2 %>% 
   ungroup()%>%
   saveRDS("data/ipmc_data.rds")
 
 
-impc_data %>% distinct(Gene, Phenotype)

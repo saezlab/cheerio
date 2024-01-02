@@ -17,7 +17,7 @@ output$cardiac_hyper_corr = renderPlot({
     plot.df= joint_contrast_df %>% 
       ungroup()%>%
       filter( grepl(pattern = "Mm|Rn", contrast_id))%>%
-      mutate(gene= str_to_title(gene),
+      mutate(#gene= str_to_title(gene),
             model= factor(ifelse(grepl("tac", contrast_id), "tac", 
                                   ifelse(grepl("swim", contrast_id ),
                                          "swim", 
@@ -135,8 +135,8 @@ output$heart_weight_plot= renderPlot({
 #IPMC_data
 output$IPMC_table= DT::renderDataTable({
  ipmc_data %>%
-    filter(Gene %in% (input$select_gene))%>%
-    select(Gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
+    filter(gene %in% (input$select_gene))%>%
+    select(gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
     DT::datatable(
       escape=F, filter = "top",
       selection = "none",
@@ -283,7 +283,8 @@ cont_res = eventReactive(input$submit_contrast, {
                                               input$select_contrast_hs,
                                               input$select_contrast_hs2),
                           cutoff = input$cut_off_genes,
-                          alpha= as.numeric(input$select_alpha)
+                          alpha= as.numeric(input$select_alpha),
+                          missing_prop = input$missing_prop
                           
                           )
   return(res)

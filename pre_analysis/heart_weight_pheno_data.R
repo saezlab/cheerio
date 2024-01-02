@@ -17,6 +17,8 @@ library(ggrepel)
 
 obj.list= readRDS("data/GEX.list.hypertrophy.rds")
 
+source("utils_pre_analysis.R")
+
 ##extract contrast data into single tidy format
 single.sample.exp= lapply(obj.list, function(mod){
   
@@ -56,7 +58,19 @@ HW_DF= single.sample.exp %>% left_join(pheno.data2, by= "id_clean")%>%
          modal= factor(paste0(toupper(modal), "seq"), levels= c("RNAseq", "RIBOseq"))
          )
 
-saveRDS(HW_DF, "data/heart_weight_gex.rds")
+mm_hs= translate_species_to_hs("Mus musculus", unique(HW_DF$MgiSymbol))
+
+HW_DF2= HW_DF%>%
+  filter(MgiSymbol %in% mm_hs$genes$oto)%>%
+  rename(gene_orig = MgiSymbol)%>%
+  #dplyr::select(-gene)%>%
+  left_join(mm_hs$df%>%
+              distinct(gene_symbol, human_gene_symbol)%>%
+              rename(gene_orig= gene_symbol,
+                     gene= human_gene_symbol))
+
+
+saveRDS(HW_DF2, "data/heart_weight_gex.rds")
 
 genes= c("Mylk4", "Nppa")
 x= "Nppa"

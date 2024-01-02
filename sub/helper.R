@@ -48,7 +48,8 @@ get_top_consistent_gene<-
   function(joint_contrast_df,
            query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
            alpha= 0.05, 
-           cutoff= 15){
+           cutoff= 15,
+           missing_prop= 40){
     
     
     contrast_df_filt= joint_contrast_df %>% 
@@ -63,7 +64,7 @@ get_top_consistent_gene<-
     
     p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
     
-    intersect_genes= names(venns[venns == length(query_contrasts)])
+    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
     
     df.msign= contrast_df_filt %>%
       dplyr::select(gene, contrast_id, logFC)%>% 
@@ -200,7 +201,7 @@ plot_hw_association= function(HW_DF,
   p= map(genes , function(x){
     #map(c("rna", "ribo"), function(y){
     HW_DF %>%
-      filter(MgiSymbol == x )%>%
+      filter(gene == x )%>%
       ggplot(., aes(x= HW_BW, y= exp, color= model))+
       geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
       facet_grid(rows= vars(modal), scales="free_y")+

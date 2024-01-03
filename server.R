@@ -277,6 +277,22 @@ observeEvent(input$reset_input_contrasts, {
   )
 })
 
+# output$selected_count <- renderText({
+#   selected_count <- length(c(input$select_contrast_mm,
+#                              input$select_contrast_hs,
+#                              input$select_contrast_hs2
+#                              ))
+#   #paste("Number of selected inputs: ", selected_count)
+# })
+
+observe({
+  selected_count <- length(c(input$select_contrast_mm,
+                             input$select_contrast_hs,
+                             input$select_contrast_hs2
+  ))
+  updateSliderInput(session, "missing_prop", max = selected_count)
+})
+
 cont_res = eventReactive(input$submit_contrast, {
   res= get_top_consistent_gene(joint_contrast_df = joint_contrast_df, 
                           query_contrasts = c(input$select_contrast_mm,
@@ -296,6 +312,10 @@ output$cq_hist= renderPlot({
 
 output$cq_top=renderPlot({
   cont_res()$p.top_genes
+})
+
+output$hmap_top=renderPlot({
+  cont_res()$hmap_top
 })
 
 output$cq_table_up= DT::renderDataTable({
@@ -384,8 +404,7 @@ observeEvent(input$reset_input_TF, {
   )
 })
 
-
-# ## A. nimal
+# ## A. Animal
 output$funcA_tf= renderPlot({
   pls= map(input$select_tf, function(x){
     plot_df = df_tf$mm%>%

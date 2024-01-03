@@ -49,7 +49,7 @@ get_top_consistent_gene<-
            query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
            alpha= 0.05, 
            cutoff= 15,
-           missing_prop= 40){
+           missing_prop= 0){
     
     
     contrast_df_filt= joint_contrast_df %>% 
@@ -64,7 +64,7 @@ get_top_consistent_gene<-
     
     p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
     
-    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
+    intersect_genes= names(venns[venns >= (length(query_contrasts)- missing_prop)])
     
     df.msign= contrast_df_filt %>%
       dplyr::select(gene, contrast_id, logFC)%>% 
@@ -135,19 +135,58 @@ get_top_consistent_gene<-
                                        ncol = 1,
                                        labels= c("top upregulated", 
                                                  "top downregulated"))
+      
+      ##add hmap
+      plot.genes= unique(c(top_dn, top_up))
+     
+      mat= joint_contrast_df %>% 
+        dplyr::select(contrast_id, gene,  logFC)%>%
+        filter(gene %in% plot.genes,
+               contrast_id %in% query_contrasts)%>%
+        pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
+        as.data.frame()%>%
+        filter(!is.na(gene))%>%
+        column_to_rownames("gene")
+      col_names_plot= c(top_dn2, top_up2)
+      
+      na_sums_per_row <- apply(mat, 1, function(row) sum(is.na(row)))
+      mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
+      
+      x= rownames(mat_subset)
+      x[!x %in% col_names_plot] <- ""
+    
+      hmap_top <- ComplexHeatmap::Heatmap(t(mat_subset),
+                                          #rect_gp = gpar(fill = "grey", lwd = 1),
+                                          name = "logFC", 
+                                          na_col = "black",
+                                          border_gp = gpar(col = "black", lty = 1),
+                                          cluster_columns = T,
+                                          cluster_rows= T, 
+                                          
+                                          column_labels = x,
+                                          column_names_gp = gpar(fontsize = 9),
+                                          row_names_side = "left",
+                                          row_dend_side = "left"
+                                          
+      )
         
     }else{ 
       p.top_genes= NULL
-      
+      hmap_top <- NULL
     }
     
-      
+    ## add hmap= 
+    
+    
+    
+    
     return(list(p.hist=p.int, 
                 genes= list("i"= intersect_genes, 
                             "u"= top_up, 
                             "d"= top_dn),
                 df= df.full, 
-                p.top_genes= p.top_genes
+                p.top_genes= p.top_genes,
+                hmap_top= hmap_top
     ))
   }
 

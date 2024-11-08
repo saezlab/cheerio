@@ -11,11 +11,39 @@
 ##
 ## collect all contrasts and provide them together in tidy format
 
+## A. MM models
+mm <- readRDS("data/contrasts_mm_limma.rds")
+mm2= mm %>% mutate(GeneDescription= "",
+              #MgiSymbol = gene, 
+              FDR= adj.P.Val,
+              PValue= P.Value)%>%
+  dplyr::select(logFC, PValue, FDR, gene, GeneDescription, tp,modal,model
+                )
 
-contrasts = readRDS("data/contrasts.hypertrophy.rds")
+## add fetal expression data:
+fetal1= readRDS(file = "data/fetalDEgenes_GSE52601.rds") %>% 
+  mutate(tp= "Hs_fetal_Akat14", 
+         modal= "rna",
+         model ="fetal") 
+fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>% 
+  mutate(tp= "Hs_fetal_Spurell22", 
+         modal= "rna",
+         model ="fetal") 
+
+fetal.df= 
+  rbind(fetal1, fetal2)%>% 
+  mutate( ## change here for adequate homologue mapping
+         GeneDescription= "")%>%
+  rename(
+         PValue= P.Value,
+         FDR= adj.P.Val)%>% 
+  dplyr::select(logFC, PValue, FDR, gene, GeneDescription, tp,modal,model)
+
+contrasts= rbind(fetal.df, mm2)
+
+#contrasts = readRDS("data/contrasts.hypertrophy.rds")
 
 contrast_df = contrasts%>% mutate(contrast_id = paste(model, modal, tp, sep= "_"))%>%
-  rename(gene= MgiSymbol)%>%
   dplyr::select(contrast_id, gene, logFC, FDR)%>%
   mutate(contrast_id= str_replace_all(contrast_id, "_fetal_rna", ""), 
          contrast_id = ifelse(!grepl("fetal", contrast_id), paste0("Mm_", contrast_id), contrast_id),

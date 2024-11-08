@@ -64,7 +64,7 @@ get_top_consistent_gene<-
     
     p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
     
-    intersect_genes= names(venns[venns >= (length(query_contrasts)- missing_prop)])
+    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
     
     df.msign= contrast_df_filt %>%
       dplyr::select(gene, contrast_id, logFC)%>% 
@@ -205,7 +205,11 @@ plot_logfc_gene = function(joint_contrast_df,
                            x_column= "contrast_id", 
                            y_column= "logFC", 
                            fg_name= NULL, 
+                           max_fc, 
+                           min_fc,
                            gene){
+  if(min_fc>0){min_fc= 0}
+  if(max_fc<0){max_fc= 0}
   
   p1= joint_contrast_df %>%
   ggplot(aes(x = !!rlang::ensym(x_column), y = !!rlang::ensym(y_column), fill = sig)) +
@@ -214,19 +218,21 @@ plot_logfc_gene = function(joint_contrast_df,
     theme_cowplot()+
     scale_x_discrete(drop=FALSE)+
     scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                 "FALSE"="orange", 
+                                 "FALSE"="darkgrey", 
                                  drop= FALSE))+
-    labs(x = "experimental group", y = "log fold change", fill = "FDR<0.05") +
+    labs(x = "", y = "log fold change", fill = "FDR<0.05") +
     theme(panel.grid.major = element_line(color = "grey",
                                           linewidth = 0.1,
                                           linetype = 1),
           panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
           panel.grid.minor = element_blank(),
+          axis.line = element_blank(),
           axis.text = element_text(size= 11), 
           axis.title = element_text(size= 10)) +
     coord_flip()+
-    ggtitle(gene)
-  
+    ggtitle(gene)+
+    ylim(c(min_fc, max_fc))
+p1  
   if(!is.null(fg_name)){p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")}
   p1
 }
@@ -239,34 +245,52 @@ plot_hw_association= function(HW_DF,
                               my.formula = y~x){
   p= map(genes , function(x){
     #map(c("rna", "ribo"), function(y){
-    HW_DF %>%
-      filter(gene == x )%>%
-      ggplot(., aes(x= HW_BW, y= exp, color= model))+
-      geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
-      facet_grid(rows= vars(modal), scales="free_y")+
-      stat_smooth(fullrange = T, method = "lm", formula = my.formula, se = F, linewidth= 0.4) +
-      stat_poly_eq(aes(label = paste(after_stat(rr.label))), 
-                   label.x = "left", label.y = "top",
-                   formula = my.formula, parse = TRUE, size = 4)+
-      stat_fit_glance(method = 'lm',
-                      method.args = list(formula =my.formula),
-                      geom = 'label_repel', 
-                      aes(label = paste("P-value = ", signif(..p.value.., digits = 4), sep = "")),
-                      label.x = 'right', label.y = "top", size = 4, alpha= 0.7)+
-      ggtitle(x)+
-      scale_color_manual(values = c("swim" = "darkblue",
-                                    "tac"="darkred", 
-                                    drop= FALSE))+
-      labs(y= "Normalized gene expression",
-           x= "Normalized heart weight", 
-           shape= "Experimental\ngroup")+
-      theme(panel.grid.major = element_line(color = "grey",
-                                            linewidth = 0.1,
-                                            linetype = 1),
-            panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
-            panel.grid.minor = element_blank(),
-            axis.text = element_text(size= 11), 
-            axis.title = element_text(size= 10)) 
+    to_plot_df<- HW_DF %>%
+      filter(gene == x )
+    
+    if(dim(to_plot_df)[1]<1){
+      error_text2 <- paste(x , "was not captured\nin data" )
+      return(
+        ggplot() + 
+          annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+          theme_void()   
+      )
+    }else{
+      return(
+      to_plot_df%>%
+        mutate(exp.group =ifelse(grepl("ct", exp.group), "ct", exp.group))%>%
+        ggplot(., aes(x= HW_BW, y= exp, color= model))+
+        geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
+        facet_grid(rows= vars(modal), scales="free_y")+
+        stat_smooth(fullrange = T, method = "lm", formula = my.formula, se = F, linewidth= 0.4) +
+        # stat_poly_eq(aes(label = paste(after_stat(rr.label))), 
+        #              label.x = "left", label.y = "top",
+        #              formula = my.formula, parse = TRUE, size = 4)+
+        stat_fit_glance(method = 'lm',
+                        method.args = list(formula =my.formula),
+                        geom = 'label_repel', 
+                        aes(label = paste("P-val= ", 
+                                          signif(..p.value.., digits = 1), sep = "")),
+                        label.x = 'right',
+                        label.y = "top",
+                        size = 4,
+                        alpha= 0.7)+
+        ggtitle(x)+
+        scale_color_manual(values = c("swim" = "darkblue",
+                                      "tac"="darkred", 
+                                      drop= FALSE))+
+        labs(y= "Normalized gene expression",
+             x= "Normalized heart weight", 
+             shape= "Experimental\ngroup")+
+        theme(panel.grid.major = element_line(color = "grey",
+                                              linewidth = 0.1,
+                                              linetype = 1),
+              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+              panel.grid.minor = element_blank(),
+              axis.text = element_text(size= 11), 
+              axis.title = element_text(size= 10)) 
+        )
+    }
   })
   
   p1= cowplot::plot_grid(plotlist = p)

@@ -1,26 +1,26 @@
+library(tidyverse)
 
 setwd(dir = "~/R-projects/Collaborations/shiny_hypertophy/")
-library(tidyverse)
 
 # mouse_hypertrophy data ----------------------------------------------------------------------
 obj.list =
   list("TAC"= 
          list("RNA"= 
-              list("2d"= readxl::read_xlsx("data/raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_only_tac2d_list.xlsx")%>% 
+              list("2d"= readxl::read_xlsx("raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_only_tac2d_list.xlsx")%>% 
                      mutate(tp= "2d", 
                             modal= "rna",
                             model ="tac") ,
-                   "2wk"= readxl::read_xlsx("data/raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_tac2wk_list.xlsx")%>% 
+                   "2wk"= readxl::read_xlsx("raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_tac2wk_list.xlsx")%>% 
                      mutate(tp= "2wk", 
                             modal= "rna",
                             model ="tac") 
                    ),
             "RIBO"=
-              list("2d"= readxl::read_xlsx("data/raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_only_tac2d_list.xlsx")%>% 
+              list("2d"= readxl::read_xlsx("raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_only_tac2d_list.xlsx")%>% 
                      mutate(tp= "2d", 
                             modal= "ribo",
                             model ="tac") ,
-                   "2wk"= readxl::read_xlsx("data/raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_tac2wk_list.xlsx")%>% 
+                   "2wk"= readxl::read_xlsx("raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_tac2wk_list.xlsx")%>% 
                      mutate(tp= "2wk", 
                             modal= "ribo",
                             model ="tac") 
@@ -28,21 +28,21 @@ obj.list =
             ),
        "Swim"= 
          list("RNA"= 
-                list("2d"= readxl::read_xlsx("data/raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_swim2d_sedentary_list.xlsx")%>% 
+                list("2d"= readxl::read_xlsx("raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_swim2d_sedentary_list.xlsx")%>% 
                        mutate(tp= "2d", 
                               modal= "rna",
                               model ="swim") ,
-                     "2wk"= readxl::read_xlsx("data/raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_swim2wk_sedentary_list.xlsx")%>% 
+                     "2wk"= readxl::read_xlsx("raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_rna_swim2wk_sedentary_list.xlsx")%>% 
                        mutate(tp= "2wk", 
                               modal= "rna",
                               model ="swim") 
                 ),
               "RIBO"=
-                list("2d"= readxl::read_xlsx("data/raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_swim2d_sedentary_list.xlsx")%>% 
+                list("2d"= readxl::read_xlsx("raw_data/2d Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_swim2d_sedentary_list.xlsx")%>% 
                        mutate(tp= "2d", 
                               modal= "ribo",
                               model ="swim"),
-                     "2wk"= readxl::read_xlsx("data/raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_swim2wk_sedentary_list.xlsx")%>% 
+                     "2wk"= readxl::read_xlsx("raw_data/2wk Listen/DEG_CPM1_non_protein_coding_transcripts_still_included_normalized_ribo_swim2wk_sedentary_list.xlsx")%>% 
                        mutate(tp= "2wk", 
                               modal= "ribo",
                               model ="swim")
@@ -75,7 +75,7 @@ contrasts= lapply(obj.list, function(mod){
       #print(colnames(tp))
         tp %>% 
            #filter(MgiSymbol %in% gene)%>% 
-           select(logFC, PValue, FDR,MgiSymbol, GeneDescription, tp, modal, model)
+           dplyr::select(logFC, PValue, FDR,MgiSymbol, GeneDescription, tp, modal, model)
       })%>%
       do.call(rbind,.)
     })%>%

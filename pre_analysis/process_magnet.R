@@ -40,6 +40,9 @@ foo <- getBM(attributes=c('ensembl_gene_id',
              filters = 'ensembl_gene_id',
              values = gc$gene_id,
              mart = hs)
+hs <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+
+
 
 
 gex.df= as_tibble(gc)%>% 

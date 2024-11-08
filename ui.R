@@ -40,8 +40,8 @@ ui = function(request) {
                       choices = (sort(unique(joint_contrast_df$gene))), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=10, `max-options` = 10),
-                      selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
+                                     size=10, `max-options` = 6)
+                      #selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
                       ),
           
           actionButton("reset_input", "Reset genes")
@@ -57,20 +57,20 @@ ui = function(request) {
             type = "tabs",
             tabPanel("A. Animal models",
                      h3("Regulation in Murine Cardiac Hypertrophy models"),
-                     h5("Gene expression regulation"),
+                     h4("Gene expression regulation"),
                      plotOutput("gene_expression_plots")%>%
                        withSpinner(),#, width = "100%", height = "600px"),
+                     p(strong("Abbreviations:")),
                      p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
                swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
                      
                      br(),
                      br(),
-                     
-                     h5("Ribo-seq and RNA-seq correlation"),
+                     h4("Ribo-seq and RNA-seq correlation"),
                      plotOutput("cardiac_hyper_corr")%>%
                        withSpinner(),
-                     
-                     
+                     p(strong("Abbreviations:")),
+                     p("2d, two days; 2wk, two weeks; swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
                      
                      br(),
                      br(),
@@ -79,19 +79,16 @@ ui = function(request) {
                      
                      #hw
                      h3("Phenotype associations"),
-                     br(),
                      h4("Explore posible associations of genetic variants with mouse phenotypes"),
+                     br(),
                      p(br()),
                      plotOutput("heart_weight_plot", width = "100%", height = "800px")%>%
                        withSpinner(),
                      br(),
-                     hr(),
-                    
                      ##ipmc table
-                    
-
                     h4("Explore posible associations of genetic variants with mouse phenotypes"),
-
+                    h5("Genes are queried in IMPC (International Mouse Phenotyping Consortium"),
+                    br(),
                     DT::dataTableOutput("IPMC_table")%>%
                       withSpinner(),
                    hr()
@@ -145,6 +142,7 @@ ui = function(request) {
             tabPanel("D. Fetal gene program", 
                      h3("Regulation in Fetal vs. Adult Human Hearts"),
                      plotOutput("fetal_gene_expression_plots", height= "250px"),
+                     p(strong("Abbreviations:")),
                      p("rna_fetal1, fetal study 1 (Spurell et al, 2022); rna_fetal2, fetal study 2 (Akat et al, 2014)"),
                      
                      hr()
@@ -222,7 +220,7 @@ tabPanel(
   mainPanel(
     h3("Search for consistent genes"),
     h4("Dysregulated genes (FDR-cutoff)"),
-    plotOutput("cq_hist"),
+    plotOutput("cq_hist")%>%withSpinner(),
     p("A. Venn Diagram displays intersections of gene sets from selected contrasts at chosen FDR cut off"),
     p("B. Barplot displays number of genes regarding their directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
     p(""),
@@ -231,13 +229,13 @@ tabPanel(
     br(),
     
     h4("Top consistently dysregulated gene(s)"),
-    plotOutput("cq_top"),
+    plotOutput("cq_top")%>%withSpinner(),
     hr(),
     br(),
     br(),
     
     h4("Top consistently dysregulated gene(s)"),
-    plotOutput("hmap_top"),
+    plotOutput("hmap_top")%>%withSpinner(),
     hr(),
     br(),
     br(),
@@ -250,7 +248,7 @@ tabPanel(
       tabPanel("Downregulated",
                DT::dataTableOutput("cq_table_dn")),
       tabPanel("all", DT::dataTableOutput("cq_table_full"))
-      ),
+      )%>%withSpinner(),
     hr(),  
     br(),
     br(),
@@ -305,8 +303,8 @@ tabPanel(
                       choices = sort(TFs),
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=6, `max-options` = 6),
-                      selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
+                                     size=6, `max-options` = 6)
+                      #selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
           ),
           actionButton("reset_input_TF", "Reset TFs")
 
@@ -470,10 +468,10 @@ tabPanel(
           hr(),
           
         )
-      ),
+      )
       
       #### Footer ####
-      footer = column(12, align="center", "CHEERIO-App 2023")
+      #footer = column(12, align="center", "CHEERIO-App")
     ) # close navbarPage
   ) # close fluidPage
 }

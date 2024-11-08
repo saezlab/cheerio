@@ -2,8 +2,11 @@
 server = function(input, output, session) {
   
 #### Query genes ####
-
-  ## reset the gene input button:
+# to test run some function we can create a dummy input_#input= list()
+# input = list()
+# input$select_gene = c("COL1A1", "POSTN")
+  
+## reset the gene input button:
  observeEvent(input$reset_input, {
     updatePickerInput(session,
                       inputId = "select_gene", selected = character(0)
@@ -14,7 +17,7 @@ server = function(input, output, session) {
 # cardiac mouse hypertrophy show correlation between transcript and translatome:  
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) ){
-    plot.df= joint_contrast_df %>% 
+    to_plot_df= joint_contrast_df %>% 
       ungroup()%>%
       filter( grepl(pattern = "Mm|Rn", contrast_id))%>%
       mutate(#gene= str_to_title(gene),
@@ -28,36 +31,30 @@ output$cardiac_hyper_corr = renderPlot({
       select( model,modality, timepoint,gene, logFC)%>%
       pivot_wider(names_from= modality, values_from = logFC, values_fn= mean)%>%
       mutate(labels= ifelse(gene %in% input$select_gene, gene, "background"),
-             labels= factor(labels, levels= c(input$select_gene, "background")),
+             labels= factor(labels, levels= c("background", input$select_gene)),
              alphas= factor(ifelse(labels=="background", "bg","normal"))
       )%>%
       arrange(desc(labels))
-  
-
-      if(length(input$select_gene)==2){
-        myColors <- c("green", "blue", "grey")
-      }else if(length(input$select_gene)==1){
-        myColors <- c("green", "grey")
-      }else{
-        myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
-      }
     
+    # get colors!
       myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
-      names(myColors) <- levels(plot.df$labels)
+      names(myColors) <- levels(to_plot_df$labels)
+      myColors["background"]<- "grey"
       
-      
-      p1= plot.df %>% 
+      p1= to_plot_df %>% 
         filter(model!= "invitro")%>%
+        arrange((labels))%>%
         drop_na()%>%
         ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
         facet_grid(rows= vars(model), 
                    cols= vars(timepoint))+
         geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
         geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_point(show.legend = T)+
-        scale_colour_manual("genes", values= myColors)+
-        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+        geom_point(aes(colour=labels))+ 
+        #geom_point(shape = 1, colour = "grey")+
+        scale_color_manual("genes", values= myColors)+
         scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4, alpha= 0.8)+
         scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
         #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
         theme(panel.grid.major = element_line(color = "grey",
@@ -70,17 +67,19 @@ output$cardiac_hyper_corr = renderPlot({
         labs(alpha= "")+
         xlab("logFC - transcriptome")+
         ylab("logFC - translatome")
-      
-      p2= plot.df %>% 
+      p1
+      p2= to_plot_df %>% 
         drop_na()%>%
         filter(model== "invitro")%>%
         ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
         facet_grid(rows= vars(model))+
         geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
         geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_point(show.legend = T)+
-        scale_colour_manual("genes", values= myColors)+
-        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+        geom_point(aes(colour=labels))+ 
+        geom_point(shape = 1, colour = "darkgrey")+
+        scale_color_manual("genes", values= myColors)+
+        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4, alpha= 0.8)+
         scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
         scale_size_manual(values=c("bg"= 0.5, "normal"= 2.5), guide = 'none')+
         #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
@@ -106,17 +105,36 @@ output$cardiac_hyper_corr = renderPlot({
 #  cardiac hypertrophy logFCs:
 output$gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) )  {
+    fc_vec = joint_contrast_df %>% 
+      filter(gene %in% input$select_gene,
+             grepl(pattern = "Mm|Rn", contrast_id))%>%
+      pull(logFC)
+            
     pls= map(input$select_gene, function(x){
       to_plot_df= joint_contrast_df %>% 
-        filter(gene==toupper(x),
+        filter(gene==x,
                grepl(pattern = "Mm|Rn", contrast_id))%>%
         mutate(model= factor(ifelse(grepl("tac", contrast_id), "tac", 
                               ifelse(grepl("swim", contrast_id ),
                                      "swim", 
                                      "invitro")),levels= c("swim", "tac", "invitro")))
+      #rows of plot df
+      if(dim(to_plot_df)[1]<1){
+          error_text2 <- paste(x , "was not captured\nin data" )
+          return(
+            ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()  
+            )
+      }else{
+          return(
+            plot_logfc_gene(to_plot_df, fg_name = "model",  gene= x, 
+                            max_fc = max(fc_vec), 
+                            min_fc = min(fc_vec)
+                            )
+          )
+        }
       
-      
-      plot_logfc_gene(to_plot_df, fg_name = "model",  gene= x)
       
     })
     p1= cowplot::plot_grid(plotlist =  pls)
@@ -128,7 +146,7 @@ output$gene_expression_plots = renderPlot({
 
 output$heart_weight_plot= renderPlot({
   if (!is.null(input$select_gene) )  {
-    plot_hw_association(HW_DF, input$select_gene)
+    plot_hw_association(HW_DF, genes = input$select_gene)
   }
 })
 
@@ -152,14 +170,32 @@ output$IPMC_table= DT::renderDataTable({
 ## reheat (human HF): 
 output$HFgene_regulation_boxplot = renderPlot({
   if (!is.null(input$select_gene) ) {
+    fc_vec <- contrasts_HF %>% 
+      filter(gene %in% input$select_gene)%>% 
+      pull(logFC)
+    
     pls= map(input$select_gene, function(x){
       # prep single study df
       to_plot_df= contrasts_HF %>% 
-        filter(gene== toupper(x))%>%
-        mutate( sig= adj.P.Val<0.05)
+        filter(gene== (x))%>%
+        mutate( sig= adj.P.Val<0.05)%>%
+        rename(contrast_id = study)
       # plot
-      plot_logfc_gene(to_plot_df, x_column = study,  gene= x)
-        })
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "was not captured\nin data" )
+        return(
+          ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()   
+        )
+      }else{
+        return(
+          plot_logfc_gene(to_plot_df,  gene= x,
+                          max_fc = max(fc_vec), 
+                          min_fc= min(fc_vec))
+        )
+      }
+    })
     p1= cowplot::plot_grid(plotlist =  pls)
     p1
   }
@@ -215,16 +251,37 @@ output$mean_t_dist = renderPlotly({
 ## human HCM single cell
 output$HF_single = renderPlot({
   if (!is.null(input$select_gene) ) {
+    fc_vec = joint_contrast_df %>% 
+      filter(grepl("singlecell", contrast_id), 
+             !grepl("DCMvsNF", contrast_id),
+             gene %in% input$select_gene)%>%
+      pull(logFC)
+      
     pls= map(input$select_gene, function(x){
-      plot_df= joint_contrast_df%>%
+      to_plot_df= joint_contrast_df%>%
         filter(grepl("singlecell", contrast_id), 
                !grepl("DCMvsNF", contrast_id))%>%
         mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
                Comparison = factor(str_extract(contrast_id, "(?<=_)[^_]+(?=_[^_]+$)"),
                                    levels= c( "HCMvsNF","HCMvsDCM")
                                    ))%>%
-        filter(gene==toupper(x))
-      plot_logfc_gene(plot_df, x= "CellType", fg_name = "Comparison",  gene= x)  
+        filter(gene==x)
+      
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "was not captured\nin data" )
+        return(
+          ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()   
+        )
+      }else{
+        return(
+          plot_logfc_gene(to_plot_df, x= "CellType", fg_name = "Comparison",  gene= x,
+                          max_fc = max(fc_vec), 
+                          min_fc = min(fc_vec)
+                          )  
+        )
+        }  
         
     })
     p1= cowplot::plot_grid(plotlist =  pls)
@@ -236,12 +293,32 @@ output$HF_single = renderPlot({
 ## human HCM bulk
 output$HFgene_regulation_magnet = renderPlot({
   if (!is.null(input$select_gene)) {
+    
+    fc_vec = joint_contrast_df %>% 
+      filter(grepl("bulk", contrast_id), 
+             !grepl("DCMvsNF", contrast_id),
+             gene %in% input$select_gene)%>%
+    pull(logFC)
+    
   pls= map(input$select_gene, function(x){
-    joint_contrast_df %>% 
-      filter(gene== toupper(x), 
+    to_plot_df<-joint_contrast_df %>% 
+      filter(gene== x, 
              grepl("bulk", contrast_id ), 
-             !grepl("DCMvsNF", contrast_id))%>%
-      plot_logfc_gene(joint_contrast_df= .,  gene= x)
+             !grepl("DCMvsNF", contrast_id))
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "was not captured\nin data" )
+        return(
+          ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()   
+        )
+      }else{
+        return(
+          plot_logfc_gene(to_plot_df, gene= x, 
+                          max_fc= max(fc_vec),
+                          min_fc= min(fc_vec))
+        )
+      }
     })
   p1= cowplot::plot_grid(plotlist =  pls)
   p1
@@ -251,11 +328,31 @@ output$HFgene_regulation_magnet = renderPlot({
 ## fetal gene expression :
 output$fetal_gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) )  {
+    
+    fc_vec = joint_contrast_df %>% 
+      filter( grepl("fetal", contrast_id ),
+             gene %in% input$select_gene)%>%
+      pull(logFC)
+    
     pls= map(input$select_gene, function(x){
-      joint_contrast_df %>% 
-        filter(gene==toupper(x), 
-               grepl("fetal", contrast_id ))%>%
-        plot_logfc_gene(joint_contrast_df= .,  gene= x)
+      to_plot_df<- joint_contrast_df %>% 
+        filter(gene==x, 
+               grepl("fetal", contrast_id ))
+      
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "was not captured\nin data" )
+        return(
+          ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()
+          )
+        }else{
+          return(
+            plot_logfc_gene(joint_contrast_df = to_plot_df,  gene= x,
+                          max_fc = max(fc_vec), 
+                          min_fc = min(fc_vec))
+        )
+      }
         
     })
     p1= cowplot::plot_grid(plotlist =  pls)
@@ -413,7 +510,7 @@ output$funcA_tf= renderPlot({
              condition= ifelse(tp=="", paste0("Rn", condition),paste0("Mm_", condition) ))
     
     plot_df%>%plot_logfc_gene(., "condition", y= "score", gene = x, fg_name = "model")+
-      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") 
+      labs(x = "experimental group", y = "", fill = "p<0.05") 
   })
   p1= cowplot::plot_grid(plotlist =  pls)
   p1

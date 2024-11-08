@@ -77,3 +77,4 @@ TFs= sapply(df_tf, function(x){
 ipmc_data= readRDS("app_data/ipmc_data.rds")
 HW_DF= readRDS("app_data/heart_weight_gex.rds")
 
+error_text = "Queried gene(s) were not captured\nin data"

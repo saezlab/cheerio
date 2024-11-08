@@ -135,12 +135,6 @@ plot_dataframe <- function(data, facet_variable, color_variable) {
 summary(lm(exp ~ HW_BW, data = datas))$r.squared
 
 
-x= "Nppa"
-map(genes, function(x){
-  HW_DF2= HW_DF %>% filter(MgiSymbol==x)
-  lm(HW_BW~ )
-})
-  
 
 
 

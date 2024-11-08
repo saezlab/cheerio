@@ -15,30 +15,34 @@ library(tidyverse)
 library(cowplot)
 library(ggrepel)
 
-c.df= readRDS("data/contrasts_query_df.rds")
+c.df= readRDS("app_data/contrasts_query_df.rds")
 
 unique(c.df$contrast_id)
 contrast_focus= c("Mm_tac_rna_2wk", 
                   "Mm_swim_rna_2wk", 
                   "Mm_swim_rna_2d", 
-                  "Mm_tac_rna_2d", "Hs_fetal_Akat14", "Hs_ReHeaT",
-                  "Hs_fetal_Spurell22", 
-                  "Rn_invitro_ribo",
+                  "Mm_tac_rna_2d",
+                  
+                  #"Rn_invitro_ribo",
                   "Rn_invitro_rna", 
-                  "Hs_singlecell_HCMvsNF_Cardiomyocyte",
-                  #"Hs_singlecell_HCMvsNF_Endothelial I",
-                 # "Hs_singlecell_HCMvsNF_Macrophage",
-                  "Hs_bulk_HCMvsNF",
-                  "Hs_singlecell_HCMvsNF_Fibroblast"
-                 )
-
-contrast_focus= c("Mm_tac_rna_2wk", 
-                  "Mm_swim_rna_2wk", 
-                  "Mm_swim_rna_2d", 
-                  "Mm_tac_rna_2d", 
-                  "Hs_fetal_Akat14",
+                  
+                  "Hs_fetal_Akat14", 
                   "Hs_ReHeaT",
                   "Hs_fetal_Spurell22", 
+                  "Hs_singlecell_HCMvsNF_Cardiomyocyte",
+                  "Hs_bulk_HCMvsNF"
+                  #"Hs_singlecell_HCMvsNF_Endothelial I",
+                 # "Hs_singlecell_HCMvsNF_Macrophage",
+                  #"Hs_singlecell_HCMvsNF_Fibroblast"
+                 )
+
+contrast_focus= c("Mm_tac_rnaseq_2wk", 
+                  "Mm_swim_rnaseq_2wk", 
+                  "Mm_swim_rnaseq_2d", 
+                  "Mm_tac_rnaseq_2d", 
+                  "Hs_fetal_Akat14",
+                  "Hs_ReHeaT",
+                  #"Hs_fetal_Spurell22", 
                   #"Rn_invitro_ribo",
                   #"Rn_invitro_rna", 
                   "Hs_singlecell_HCMvsNF_Cardiomyocyte",
@@ -59,15 +63,13 @@ rank.df= c.df %>%
   mutate(min.FDR = min(FDR[FDR > 0]),
          FDR_mod= ifelse(FDR== 0, min.FDR, FDR), 
          new_weight= (logFC)*-log10(FDR_mod))%>%
-  #filter(FDR<.05)%>%
-  select(logFC, contrast_id, gene)%>% 
+  mutate(gene = str_to_title(gene))%>%
+  dplyr::select(logFC, contrast_id, gene)%>% 
   filter(contrast_id %in% contrast_focus)%>%
   pivot_wider(names_from = contrast_id, values_from  = logFC, values_fn= mean)
 
 rank.df
 
-
-                       
 rank.matrix=rank.df %>% 
   drop_na() %>%
   #filter(!is.na(gene))%>%
@@ -84,7 +86,7 @@ r.m= scale(rank.matrix)
 #apply(r.m, 2, hist)
 
 PCA= prcomp(t(r.m), center = F, scale. =F)
-
+PCA= prcomp(t(rank.matrix), center = T, scale. =T)
 p.df= PCA$x %>% 
   as.data.frame()%>%
   rownames_to_column("c.id")%>%
@@ -93,7 +95,7 @@ p.df= PCA$x %>%
 plot_pca= function(p.df, 
                    pc_x= 1, 
                    pc_y= 2){
-  
+  require(ggrepel)
   x_col= paste0("PC", pc_x)
   y_col= paste0("PC", pc_y)
   p.df %>% 
@@ -102,16 +104,18 @@ plot_pca= function(p.df,
     theme_minimal()+
     labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
          y= paste(y_col, " (",as.character(round(PCA$sdev[pc_y]^2/sum(PCA$sdev^2)*100)),"%)"))+
-    ggtitle(paste0(""))
-    #geom_label_repel(aes(label= c.id))
-    #theme_cowplot()
+    ggtitle(paste0(""))+
+    geom_label_repel(aes(label= c.id))
 }
 
 p1= plot_pca(p.df, 1,2)
+p1
 p2= plot_pca(p.df, 3,4)
 p3= plot_pca(p.df, 5,6)
 p1
-plot_grid(p1,p2,p3)
+plot_grid(p1+theme(legend.position = "none"),
+          p2+theme(legend.position = "none"),
+          p3)
 
 map(PCA$sdev, function(x){
   round(x^2/sum(PCA$sdev^2)*100, 3)
@@ -292,7 +296,7 @@ rank.df = c.df %>%
          FDR_mod= ifelse(FDR== 0, min.FDR, FDR), 
          new_weight= sign(logFC)*-log10(FDR_mod))%>%
   #filter(FDR<.05)%>%
-  select(logFC, contrast_id, gene)%>% 
+  dplyr::select(logFC, contrast_id, gene)%>% 
   filter(contrast_id %in% contrast_focus)%>%
   pivot_wider(names_from = contrast_id, values_from  = logFC, values_fn= mean)
 
@@ -302,16 +306,16 @@ rank.matrix=rank.df %>%
   as.data.frame()%>% 
   column_to_rownames("gene")%>% as.matrix()
 
-
+r.m = scale(t(rank.matrix))
 corrplot::corrplot(corr = cor(r.m, method = "pearson"))
 
 # add hierachical cluster with cosine
 library(lsa)
-sc.m= scale((rank.matrix))
-d= cosine(r.m)
-cl= hclust( as.dist(1-d))
+sc.m= scale(t(rank.matrix))
+d= cosine(t(sc.m))
+cl= hclust(as.dist(1-d))
 plot(cl)
-
+dim(rank.matrix)
 d1= dist(t(sc.m))
 plot(hclust(d1))
 

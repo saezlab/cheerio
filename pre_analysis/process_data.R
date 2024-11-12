@@ -1,6 +1,6 @@
 library(tidyverse)
 
-setwd(dir = "~/R-projects/Collaborations/shiny_hypertophy/")
+setwd(dir = "~/R-projects/Collaborations/cheerio/")
 
 # mouse_hypertrophy data ----------------------------------------------------------------------
 obj.list =
@@ -296,8 +296,8 @@ unique(sc.gex$Significant)
 
 
 # explore PE in vitro -------------------------------------------------------------------------
-
-df= readxl::read_excel("data/raw_data/invitro_PE/ribo_seq_nrvm_online_merged.xlsx")
+library(readxl)
+df= readxl::read_excel("../cheerio/raw_data/invitro_PE/ribo_seq_nrvm_online_merged.xlsx")
 
 df= read_csv("data/raw_data/invitro_PE/ribo_seq_nrvm_online_merged.csv")
 
@@ -311,7 +311,7 @@ dge<- DGEList(counts=df)#, group=group)
 #detect and remove low expressed gene
 keep <- filterByExpr(dge, min.count	= 5, min.total.count= 10, min.prop = 0.5)
 table(keep)
-?filterByExpr
+
 dge <- dge[keep,,keep.lib.sizes=FALSE]
 
 dge <- calcNormFactors(dge)
@@ -345,45 +345,29 @@ p.pca
 library(biomaRt)
 
 
-x1= read_csv("raw_data/invitro_PE/Ribo_DEG_CPM10_NRVM_online.csv")
-x2= read_csv("raw_data/invitro_PE/RNA_DEG_CPM10_NRVM_online.csv")
-
-
-rat_genes = unique(c(x1$Ensemble_ID, x2$Ensemble_ID_RNA))
-
-#translate gene ID to symbol
-ensembl <- useMart("ensembl", dataset="rnorvegicus_gene_ensembl")
-
-listFilters(ensembl)
-
-foo <- getBM(attributes=c('ensembl_gene_id',
-                          'external_gene_name'),
-             #'mgi_symbol')
-             filters = 'ensembl_gene_id',
-             values = rat_genes,
-             mart = ensembl)
-
+x1= read_csv("../cheerio/raw_data/invitro_PE/Ribo_DEG_CPM10_NRVM_online.csv")
+x2= read_csv("../cheerio/raw_data/invitro_PE/RNA_DEG_CPM10_NRVM_online.csv")
 
 x1= x1 %>%
-  rename(ensembl_gene_id= Ensemble_ID)%>%
-  left_join(foo)
+  rename(ensembl_gene_id= Ensemble_ID)
   
-x1 = x1 %>% dplyr::rename(gene= external_gene_name)%>%
-  dplyr::select(gene, logFC, FDR)%>%
+x1 = x1 %>% dplyr::rename(gene= ensembl_gene_id)%>%
+  dplyr::select(gene, logFC,PValue,  FDR)%>%
+  rename(pval = PValue)%>%
   mutate(#contrast_field= "Rn_invitro", 
          contrast_id = "Rn_invitro_ribo")
 
 x2= x2 %>%
-  dplyr::rename(ensembl_gene_id= Ensemble_ID_RNA)%>%
-  left_join(foo)
+  dplyr::rename(ensembl_gene_id= Ensemble_ID_RNA)
 
 x2 = x2 %>%
-  dplyr::rename(gene= external_gene_name)%>%
-  dplyr::select(gene, logFC, FDR)%>%
+  dplyr::rename(gene= ensembl_gene_id)%>%
+  dplyr::select(gene, logFC,PValue,  FDR)%>%
+  rename(pval = PValue)%>%
   mutate(#contrast_field= "Rn_invitro", 
          contrast_id = "Rn_invitro_rna")
 
 
-saveRDS(object = rbind(x1, x2),file =  "raw_data/invitro_PE/contrast_df.rds")
+saveRDS(object = rbind(x1, x2),file =  "../cheerio/raw_data/invitro_PE/rat_invitro_contrast_df.rds")
 
 

@@ -4,10 +4,10 @@ library(cowplot)
 library(ggrepel)
 library(ggdendro)
 
-c.df= readRDS("data/contrasts_query_df_translated.rds")
+c.df= readRDS("data/contrasts_query_df_translated3.rds")
 
 contrasts_oi <- c.df %>%
-  filter(!grepl("DCMvsNF", contrast_id)) %>%
+  #filter(!grepl("DCMvsNF", contrast_id)) %>%
   filter(!grepl("HCMvsDCM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 
@@ -52,7 +52,7 @@ main_plot <- c.df %>%
   geom_jitter(size = 0.2, width = 0.3) +
   theme_cowplot() +
   scale_color_manual(values = c("grey", "red", "blue")) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust= 0.5),
         legend.position = "none") +
   labs(x = "")
 
@@ -66,28 +66,17 @@ combined_plot <- plot_grid(
   main_plot,
   ncol = 1,
   align = "v",
-  rel_heights = c(0.1, 1)
+  rel_heights = c(0.2, 1)
 )
 combined_plot
 
 print(combined_plot)
 
 pdf(file = "pre_analysis/manhatten_plot.pdf", 
-    height=10, 
-    width=10)
+    height= 7, 
+    width=7)
 print(combined_plot)
 dev.off()
 #
 
-
-# contrast_meta -----------------------------------------------------------
-
-meta= read_csv("~/Downloads/contrast and data overview - Sheet1.csv")
-str_split(meta$contrast_id,"_")[][4]
-meta %>% mutate(contrast_id2 = paste(species, 
-                                     tissue,
-                                     modality,
-                                     resolution,
-                                     `disease/model`, 
-                                     sep= "_"))%>% pull(contrast_id2)
 

@@ -18,52 +18,33 @@ library(circlize)
 
 library(ggrepel)
 
-c.df= readRDS("data/contrasts_query_df_translated.rds")
+c.df= readRDS("data/contrasts_query_df_translated3.rds")
+
 c.df$contrast_id%>% unique()%>%
   write.csv("data/contrast_ids.csv")
 # number of unique genes
-length(unique(c.df$gene_orig))
+
 length(unique(c.df$gene))
 unique(c.df$contrast_id)
 
-contrast_comparisons<- c.df%>% group_by(gene)%>%
+contrast_comparisons<- c.df%>% 
+  group_by(gene)%>%
   summarize(contrast_count = n_distinct(contrast_id))
 
 sum(contrast_comparisons$contrast_count >9)
 
 p.hist.counts <- contrast_comparisons%>% 
   ggplot(aes(x= contrast_count))+
-  geom_histogram(bins = 50)+
+  geom_histogram(bins = 30)+
   scale_y_log10()+
   labs(x= "number of contrasts", 
        y= "number of genes")+
   theme_cowplot()
 
-contrast_focus= c("Mm_tac_rna_2wk", 
-                  "Mm_swim_rna_2wk", 
-                  "Mm_swim_rna_2d", 
-                  "Mm_tac_rna_2d",
-                  #"Mm_tac_prot_2wk",
-                  "Mm_swim_prot_2d",
-                  "Mm_swim_prot_2wk",
-                  "Mm_tac_ribo_2wk", 
-                  "Mm_swim_ribo_2wk", 
-                  "Mm_swim_ribo_2d", 
-                  "Mm_tac_ribo_2d",
-                  
-                  "Rn_invitro_ribo",
-                  "Rn_invitro_rna", 
-                  
-                  #"Hs_fetal_Akat14", 
-                  "Hs_ReHeaT",
-                  "Hs_fetal_Spurell22", 
-                  "Hs_singlecell_HCMvsNF_Cardiomyocyte",
-                  "Hs_bulk_HCMvsNF"
-                  #"Hs_bulk_prot_cHypvsNF"
-                  #"Hs_singlecell_HCMvsNF_Endothelial I",
-                  # "Hs_singlecell_HCMvsNF_Macrophage",
-                  #"Hs_singlecell_HCMvsNF_Fibroblast"
-)
+p.hist.counts
+
+
+# run correlation and hierarchical cluster --------------------------------
 
 get_boxplot_from_matrix<- function(mtx){
   mtx %>% as.data.frame()%>% 
@@ -120,10 +101,15 @@ unsupervised_wrapper<- function(c.df,
   return(wide_lfc)
 }
 
+## define contrasts of interest
+
+# compare all proteomics data:
 contrast_prot <- unique(c.df$contrast_id[grepl("prot", c.df$contrast_id)])
 
-contrast_mm <- unique(c.df$contrast_id[grepl("Mm|Rn", c.df$contrast_id)])
+#compare all animal models
+contrast_mm <- unique(c.df$contrast_id[grepl("mm|rn", c.df$contrast_id)])
 mm_res <- unsupervised_wrapper(c.df,contrast_mm )
+
 #get numbers:
 cor.test(mm_res[,"Mm_tac_ribo_2d"], mm_res[,"Mm_tac_rna_2d"])
 cor.test(mm_res[,"Mm_tac_ribo_2wk"], mm_res[,"Mm_tac_rna_2wk"])
@@ -133,83 +119,165 @@ cor.test(mm_res[,"Mm_tac_rna_2d"], mm_res[,"Mm_tac_prot_2wk"])
 
 cor.test(mm_res[,"Mm_swim_prot_2wk"], mm_res[,"Mm_tac_prot_2wk"])
 
-contrast_hs <- unique(c.df$contrast_id[grepl("Hs", c.df$contrast_id)])
+#compare all human data
+contrast_hs <- unique(c.df$contrast_id[grepl("hs", c.df$contrast_id)])
 
 contrasts_oi <- c.df %>%
-  filter(!grepl("DCMvsNF|HCMvsDCM|single", contrast_id)) %>%
-  filter(grepl("Hs", contrast_id)) %>%
+  filter(!grepl("HCMvsDCM|snR", contrast_id)) %>%
+  filter(grepl("hs", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 hs_res <- unsupervised_wrapper(c.df,contrasts_oi )
 
-cor(hs_res)
-
 ## cross species
-
-contrast_cs= c("Mm_tac_rna_2wk", 
-                  "Mm_swim_rna_2wk", 
-                  "Mm_swim_rna_2d", 
-                  "Mm_tac_rna_2d",
-                # "Rn_invitro_ribo",
-                 # "Rn_invitro_rna", 
-                  
-                  #"Hs_fetal_Akat14", 
-                  "Hs_ReHeaT",
-                  "Hs_fetal_Spurell22", 
-                  #"Hs_singlecell_HCMvsNF_Cardiomyocyte",
-                  "Hs_bulk_HCMvsNF"
-              
-)
+contrast_cs <- c.df %>%
+  filter(!grepl("prot|snR", contrast_id)) %>%
+  #filter(grepl("mm_TAC", contrast_id)) %>%
+  pull(contrast_id)%>% unique()
+contrast_cs
 
 cs_res <- unsupervised_wrapper(c.df,contrast_cs )
 
+contrast_cs <- c.df %>%
+  filter(!grepl("prot|snR|ribo", contrast_id)) %>%
+  #filter(grepl("mm_TAC", contrast_id)) %>%
+  pull(contrast_id)%>% unique()
+contrast_cs
 
-contrast_cm= c("Mm_tac_rna_2wk", 
-               "Mm_swim_rna_2wk", 
-               "Mm_swim_rna_2d", 
-               "Mm_tac_rna_2d",
-                #"Rn_invitro_ribo",
-                "Rn_invitro_rna", 
-               
-               #"Hs_fetal_Akat14", 
-               "Hs_ReHeaT",
-               "Hs_fetal_Spurell22", 
-               "Hs_singlecell_HCMvsNF_Cardiomyocyte",
-               "Hs_bulk_HCMvsNF"
-               
-)
-
+contrast_cm = c(contrast_cs, "hs_HCMvsNF_snRNA_CM")
 cm_res <- unsupervised_wrapper(c.df,contrast_cm )
 
+# PCA  --------------------------------------------------------------------
+cm_res_scaled = t(scale((cm_res), center=T, scale = T))
 
-
-hs_res <- unsupervised_wrapper(c.df,contrast_prot )
-
-prot_res <- unsupervised_wrapper(c.df,contrast_focus )
-
-rank.df= c.df %>%
-  dplyr::select(logFC, contrast_id, gene)%>% 
-  filter(contrast_id %in% contrast_focus)%>%
-  pivot_wider(names_from = contrast_id, values_from  = logFC, values_fn= mean)%>%
-  drop_na
-
-rank.matrix=rank.df %>% 
-  drop_na() %>%
-  as.data.frame()%>% 
-  column_to_rownames("gene")%>% 
-  as.matrix()
-
-#rank.matrix
-dim(rank.matrix)
-
-
-
-r.m= (scale(rank.matrix, center = F, scale= T))
-p1<- get_boxplot_from_matrix(l)
-# we scale per logfc vector :
-dim(r.m)
-p2<- get_boxplot_from_matrix(r.m)
-
+p1<- get_boxplot_from_matrix(cm_res)
+p2<- get_boxplot_from_matrix(t(cm_res_scaled))
 cowplot::plot_grid(p1+labs(y= "log2FC"), p2+labs(y = "scaled log2FC"), align ="h")
+
+PCA= prcomp((cm_res_scaled), center = F, scale. =F)
+#PCA= prcomp(t(cm_res), center = T, scale. =T)
+
+p.df= PCA$x %>% 
+  as.data.frame()%>%
+  rownames_to_column("c.id")%>%
+  as_tibble()%>% 
+  mutate(species= ifelse(grepl("hs", c.id), "human", "animal"))
+p.df
+
+plot_pca= function(p.df, 
+                   pc_x= 1, 
+                   pc_y= 2){
+  require(ggrepel)
+  require(RColorBrewer)
+  #RColorBrewer::display.brewer.pal(5, "qual")
+  x_col= paste0("PC", pc_x)
+  y_col= paste0("PC", pc_y)
+  p.df %>% 
+  ggplot(aes(x = !!rlang::ensym(x_col),
+             y = !!rlang::ensym(y_col), 
+             shape= species, 
+             color= c.id,
+             label = c.id))+
+    #geom_text(alpha= 0.6, color="black")+
+    geom_text_repel(alpha= 0.6)+
+    geom_point(size= 3)+
+    theme_cowplot()+
+    #scale_color_brewer(type="qual", palette=2)+
+    theme(axis.line = element_blank())+
+    labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
+         y= paste(y_col, " (",as.character(round(PCA$sdev[pc_y]^2/sum(PCA$sdev^2)*100)),"%)"),
+         color= "contrast ID")+
+    ggtitle(paste0(""))+
+    theme( panel.border = element_rect(colour = "black", fill=NA, size=1))
+}
+
+p1= plot_pca(p.df, 1,2)
+#p1= plot_pca(p.df, 5,6)
+p1
+
+legend <- get_legend(
+  # create some space to the left of the legend
+  p1 + theme(legend.box.margin = margin(0, 0, 0, 12))
+  )
+
+p2= plot_pca(p.df, 3,4)
+p2
+
+plot_grid(p1+theme(legend.position = "none"),
+          p2+theme(legend.position = "none"),
+          nrow= 1,
+          legend)
+
+p3= plot_pca(p.df, 5,6)
+
+pdf("plots/plot_PCA_contrasts12.pdf",
+    width= 8, height= 5)
+p1
+dev.off()
+
+##screeplot
+map(PCA$sdev, function(x){
+  round(x^2/sum(PCA$sdev^2)*100, 3)
+})%>% unlist()%>% plot()
+
+
+## for CM comparison. pathologic hypertrophy on PC1 (negative) 
+## and species on PC2 negative is mouse
+## Q which are the genes that are species independent on pathologic hypertrophy
+hist(PCA$rotation[,1], breaks = 50)
+hist(PCA$rotation[,2], breaks = 50)
+
+
+p.pcaloadings= PCA$rotation[,1:5] %>% 
+  as_data_frame() %>% 
+  mutate(gene= rownames(PCA$rotation))
+
+p.pcaloadings%>%
+  ggplot(., aes(x= PC3, y= PC4))+
+  geom_point()
+  
+p.pcaloadings<-
+p.pcaloadings %>% 
+  mutate(mm= (PC1 < -0.03 ) & (PC2 < 0.03),
+         hs= (PC1 < -0.03 ) & (PC2 > 0.03), 
+         label= ifelse(hs | mm, gene, ""),
+         prio= -(PC1)*abs(PC2),
+         prio2= -PC1* (1-PC2))
+plot.loads= p.pcaloadings%>%
+  ggplot(., aes(x= PC1, y= PC2, color= prio))+
+  geom_label_repel(aes(label= label),
+                   alpha= 0.6,
+                   color= "black",
+                   max.overlaps = 40)+
+  geom_point()+#color= "darkgrey")+
+  theme_cowplot()+
+  scale_color_gradient2(low= "black",mid= "darkgrey", high = "red")+
+  theme( panel.border = element_rect(colour = "black", fill=NA, size=1))+
+  coord_equal()+
+  labs(color= "")
+plot.loads
+
+pdf("plots/plot_PCA_contrasts12_loadings.pdf",
+    width= 8, height= 5)
+plot.loads
+dev.off()
+
+#get genes that associate with hypertrophy but not w species
+
+p.pcaloadings%>%
+  arrange(desc(prio))%>%
+  slice_head(n= 20)%>% pull(gene)
+
+# pc1.df= enframe(sort(PCA$rotation[,1:2]))%>% arrange(desc(abs(value)))
+# 
+# species_diff %>% 
+#   mutate(dir= sign(value))%>%
+#   group_by(dir)%>%
+#   mutate(value2= abs(value)) %>% 
+#   top_n(n = 20,wt = value2)%>%
+#   arrange(desc(value))%>% 
+#   print(n=100)
+
+
 
 # NMF-------------------------------------------------------------------------
 library(NMF)
@@ -343,137 +411,6 @@ labeledHeatmap(Matrix = moduleTraitCor,
                textMatrix = paste(signif(moduleTraitCor, 2), "\n(", signif(moduleTraitPvalue, 1), ")", sep = ""),
                setStdMargins = FALSE,
                cex.text = 0.7, zlim = c(-1,1))
-# PCA  --------------------------------------------------------------------
-cm_res_scaled = t(scale((cm_res), center=T, scale = T))
-
-p1<- get_boxplot_from_matrix(cm_res)
-p2<- get_boxplot_from_matrix(t(cm_res_scaled))
-cowplot::plot_grid(p1+labs(y= "log2FC"), p2+labs(y = "scaled log2FC"), align ="h")
-
-PCA= prcomp((cm_res_scaled), center = F, scale. =F)
-#PCA= prcomp(t(cm_res), center = T, scale. =T)
-
-p.df= PCA$x %>% 
-  as.data.frame()%>%
-  rownames_to_column("c.id")%>%
-  as_tibble()%>% 
-  mutate(species= ifelse(grepl("Hs", c.id), "human", "animal"))
-p.df
-
-plot_pca= function(p.df, 
-                   pc_x= 1, 
-                   pc_y= 2){
-  require(ggrepel)
-  require(RColorBrewer)
-  RColorBrewer::display.brewer.pal(5, "qual")
-  x_col= paste0("PC", pc_x)
-  y_col= paste0("PC", pc_y)
-  p.df %>% 
-  ggplot(aes(x = !!rlang::ensym(x_col),
-             y = !!rlang::ensym(y_col), 
-             shape= species, 
-             color= c.id,
-             label = c.id))+
-    #geom_text(alpha= 0.6, color="black")+
-    geom_point(size= 3)+
-    theme_cowplot()+
-    scale_color_brewer(type="qual", palette=2)+
-    theme(axis.line = element_blank())+
-    labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
-         y= paste(y_col, " (",as.character(round(PCA$sdev[pc_y]^2/sum(PCA$sdev^2)*100)),"%)"),
-         color= "contrast ID")+
-    ggtitle(paste0(""))+
-    theme( panel.border = element_rect(colour = "black", fill=NA, size=1))
-}
-
-p1= plot_pca(p.df, 1,2)
-#p1= plot_pca(p.df, 5,6)
-p1 = p1+ coord_equal()
-p1
-legend <- get_legend(
-  # create some space to the left of the legend
-  p1 + theme(legend.box.margin = margin(0, 0, 0, 12))
-  )
-
-p2= plot_pca(p.df, 3,4)
-p2
-
-plot_grid(p1+theme(legend.position = "none"),
-          p2+theme(legend.position = "none"),
-          nrow= 1,
-          legend)
-
-p3= plot_pca(p.df, 5,6)
-
-pdf("plots/plot_PCA_contrasts12.pdf",
-    width= 8, height= 5)
-p1
-dev.off()
-
-##screeplot
-map(PCA$sdev, function(x){
-  round(x^2/sum(PCA$sdev^2)*100, 3)
-})%>% unlist()%>% plot()
-
-
-## for CM comparison. pathologic hypertrophy on PC1 (negative) 
-## and species on PC2 negative is mouse
-## Q which are the genes that are species independent on pathologic hypertrophy
-hist(PCA$rotation[,1], breaks = 50)
-hist(PCA$rotation[,2], breaks = 50)
-
-
-p.pcaloadings= PCA$rotation[,1:5] %>% 
-  as_data_frame() %>% 
-  mutate(gene= rownames(PCA$rotation))
-
-p.pcaloadings%>%
-  ggplot(., aes(x= PC3, y= PC4))+
-  geom_point()
-  
-p.pcaloadings<-
-p.pcaloadings %>% 
-  mutate(mm= (PC1 < -0.03 ) & (PC2 < 0.03),
-         hs= (PC1 < -0.03 ) & (PC2 > 0.03), 
-         label= ifelse(hs | mm, gene, ""),
-         prio= -(PC1)*abs(PC2),
-         prio2= -PC1* (1-PC2))
-plot.loads= p.pcaloadings%>%
-  ggplot(., aes(x= PC1, y= PC2, color= prio))+
-  geom_label_repel(aes(label= label),
-                   alpha= 0.6,
-                   color= "black",
-                   max.overlaps = 40)+
-  geom_point()+#color= "darkgrey")+
-  theme_cowplot()+
-  scale_color_gradient2(low= "black",mid= "darkgrey", high = "red")+
-  theme( panel.border = element_rect(colour = "black", fill=NA, size=1))+
-  coord_equal()+
-  labs(color= "")
-plot.loads
-
-pdf("plots/plot_PCA_contrasts12_loadings.pdf",
-    width= 8, height= 5)
-plot.loads
-dev.off()
-
-#get genes that associate with hypertrophy but not w species
-
-p.pcaloadings%>%
-  arrange(desc(prio))%>%
-  slice_head(n= 20)%>% pull(gene)
-
-# pc1.df= enframe(sort(PCA$rotation[,1:2]))%>% arrange(desc(abs(value)))
-# 
-# species_diff %>% 
-#   mutate(dir= sign(value))%>%
-#   group_by(dir)%>%
-#   mutate(value2= abs(value)) %>% 
-#   top_n(n = 20,wt = value2)%>%
-#   arrange(desc(value))%>% 
-#   print(n=100)
-
-
 # interpret pc2 -----------------------------------------------------------
 
 msigDB= readRDS("/home/jan/R-projects/scell_hfpef/data/prior_knowledge/Genesets_Dec19.rds")
@@ -691,9 +628,189 @@ dev.off()
 
 # get signature -----------------------------------------------------------
 
+# generate signatures -----------------------------------------------------
+
+
+library(survcomp)
+# update the 
+c.df2<- c.df%>% 
+  group_by(contrast_id)%>%
+  mutate(pval_min = min(pval[pval > 0]),  ## modify FDR values that are INF to smallest non-zero FDR within that contrast
+         pval_mod= ifelse(pval== 0, pval_min, pval))
+
+contrasts_oi<- contrast_cm
+missing_na<- 2
+(length(contrasts_oi)-missing_na)
+x<- c.df2 %>% 
+  filter(contrast_id %in% contrasts_oi)%>%
+  group_by(gene)%>% 
+  select(gene, pval_mod)%>%
+  mutate(gene_count = as.numeric(ave(gene, gene, FUN = length)))%>%
+  filter(gene_count > (length(contrasts_oi)-missing_na) )%>%
+  mutate(fisher_p=  survcomp::combine.test(pval_mod, "fisher", na.rm = T))%>%
+  distinct(gene, fisher_p)%>%
+  ungroup()%>% 
+  mutate(fisher_p_adj= p.adjust(fisher_p))
+
+
+ggplot(x, aes(x= reorder(gene, fisher_p), y= -log10(fisher_p)))+
+  geom_point()+
+  theme_minimal()+
+  theme(axis.text.x=element_blank())
+
+
+
+source("sub/global.R")
 source("sub/helper.R")
 
+get_top_consistent_gene<-
+  function(joint_contrast_df,
+           query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
+           alpha= 0.05, 
+           cutoff= 15,
+           missing_prop= 10){
+    
+    
+    contrast_df_filt= joint_contrast_df %>% 
+      filter(contrast_id %in% query_contrasts)%>%
+      filter(FDR< alpha)
+    
+    # get overview of intersect
+    venns= table(contrast_df_filt$gene)
+    
+    x= split(contrast_df_filt$gene, contrast_df_filt$contrast_id)
+    x= lapply(x, unique)
+    
+    p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
+    
+    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
+    
+    df.msign= contrast_df_filt %>%
+      dplyr::select(gene, contrast_id, logFC)%>% 
+      filter(gene %in% intersect_genes) %>%
+      group_by(gene)%>% 
+      summarise(m.sign = mean(sign(logFC)))%>%
+      mutate(top_ = ifelse(m.sign== 1, "upregulated", 
+                           ifelse(m.sign ==-1 , "downregulated", "inconsistent")))
+    
+    top_up = df.msign %>%
+      filter(top_== "upregulated")%>% pull(gene)
+    
+    top_dn = df.msign %>%
+      filter(top_== "downregulated")%>% pull(gene)
+    
+    p.bar.intersect=
+      ggplot(df.msign, aes(x= factor(top_, levels = c("upregulated", 
+                                                      "downregulated", 
+                                                      "inconsistent"))))+
+      geom_bar()+
+      labs(x= "consistency of regulation")+
+      theme(axis.text.x = element_text(angle= 60, hjust= 1))
+    
+    p.int=  cowplot::plot_grid( p.venn,p.bar.intersect,
+                                ncol = 2, labels = c("A", 
+                                                     "B"), 
+                                rel_widths = c(1,0.3))
+    
+    # calculate the median normalized rank across contrasts
+    df.median= joint_contrast_df %>%
+      filter(contrast_id %in% query_contrasts,
+             gene %in% intersect_genes)%>% 
+      group_by(gene)%>%
+      summarise(m.r= mean(ranks3))
+    
+    df.full= df.median %>%
+      arrange(desc(m.r)) %>%
+      left_join(contrast_df_filt%>%
+                  dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")
+    
+    if(length(intersect_genes)!= 0){
+      top_dn2= df.median%>% filter(gene %in% top_dn) %>% arrange(desc(m.r))%>% slice(1:cutoff)%>% pull(gene)
+      top_up2= df.median%>% filter(gene %in% top_up) %>% arrange(m.r)%>% slice(1:cutoff)%>% pull(gene)
+      
+      p.top_gene_up=
+        df.full %>% 
+        filter(gene %in% c( top_up2))%>% 
+        mutate(gene= factor(gene, levels= c(top_up2)))%>%
+        ggplot(., 
+               aes(x= gene, y= logFC))+
+        geom_boxplot(outlier.colour = NA)+
+        geom_jitter(aes( color= contrast_id))+
+        theme(axis.text.x = element_text(angle= 60 , hjust= 1))
+      #geom_hline(yintercept = 0)
+      
+      p.top_gene_dn=
+        df.full %>% 
+        filter(gene %in% c(top_dn2 ))%>% 
+        mutate(gene= factor(gene, levels= c(top_dn2 )))%>%
+        ggplot(., 
+               aes(x= gene, y= logFC))+
+        geom_boxplot(outlier.colour = NA)+
+        geom_jitter(aes( color= contrast_id))+
+        theme(axis.text.x = element_text(angle= 60 , hjust= 1))
+      #geom_hline(yintercept = 0)      
+      
+      p.top_genes = cowplot::plot_grid(p.top_gene_up, p.top_gene_dn, 
+                                       ncol = 1,
+                                       labels= c("top upregulated", 
+                                                 "top downregulated"))
+      
+      ##add hmap
+      plot.genes= unique(c(top_dn, top_up))
+      
+      mat= joint_contrast_df %>% 
+        dplyr::select(contrast_id, gene,  logFC)%>%
+        filter(gene %in% plot.genes,
+               contrast_id %in% query_contrasts)%>%
+        pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
+        as.data.frame()%>%
+        filter(!is.na(gene))%>%
+        column_to_rownames("gene")
+      col_names_plot= c(top_dn2, top_up2)
+      
+      na_sums_per_row <- apply(mat, 1, function(row) sum(is.na(row)))
+      mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
+      
+      x= rownames(mat_subset)
+      x[!x %in% col_names_plot] <- ""
+      
+      hmap_top <- ComplexHeatmap::Heatmap(t(mat_subset),
+                                          #rect_gp = gpar(fill = "grey", lwd = 1),
+                                          name = "logFC", 
+                                          na_col = "black",
+                                          border_gp = gpar(col = "black", lty = 1),
+                                          cluster_columns = T,
+                                          cluster_rows= T, 
+                                          
+                                          column_labels = x,
+                                          column_names_gp = gpar(fontsize = 9),
+                                          row_names_side = "left",
+                                          row_dend_side = "left"
+                                          
+      )
+      
+    }else{ 
+      p.top_genes= NULL
+      hmap_top <- NULL
+    }
+    
+    ## add hmap= 
+    
+    
+    
+    
+    return(list(p.hist=p.int, 
+                genes= list("i"= intersect_genes, 
+                            "u"= top_up, 
+                            "d"= top_dn),
+                df= df.full, 
+                p.top_genes= p.top_genes,
+                hmap_top= hmap_top
+    ))
+  }
 
-x= get_top_consistent_gene(joint_contrast_df = c.df, query_contrasts =contrast_cm, missing_prop = 2 )
+x= get_top_consistent_gene(joint_contrast_df = c.df, 
+                           query_contrasts =contrasts_oi, 
+                           missing_prop = 20 )
+x
 
-x$genes

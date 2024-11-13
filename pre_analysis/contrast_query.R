@@ -10,6 +10,7 @@
 ## Purpose of script:
 ##
 ## collect all contrasts and provide them together in tidy format
+
 library(tidyverse)
 
 ## A. MM models
@@ -135,11 +136,12 @@ swim_prot <- swim_prot %>%
                               paste0(contrast_id,"_2wk")))%>%
   rename(FDR = fdr.limma,
          pval = pvalue.limma)%>%
-  select(contrast_id,  gene,logFC, pval, FDR)
+  dplyr::select(contrast_id,  gene,logFC, pval, FDR)
 
-
+swim_prot
 tac_prot= read_csv("raw_data/proteome/Maus TAC/Limma_results_V1.csv")
 tac_prot <- tac_prot %>% 
+  filter(comparison== "TAC - Sham_TAC")%>%
   mutate(gene = sapply(strsplit(gene_name, "\\|"), `[`, 1) %>% 
            sub("\\..*", "", .)) %>%
   mutate(contrast_id = "Mm_tac_prot", 
@@ -148,8 +150,8 @@ tac_prot <- tac_prot %>%
                               paste0(contrast_id,"_2wk")))%>%
   rename(FDR = fdr.limma,
          pval = pvalue.limma)%>%
-  select(contrast_id,  gene,logFC, pval, FDR)
-
+  dplyr::select(contrast_id,  gene,logFC, pval, FDR)
+tac_prot%>% filter(gene=="ENSMUSP00000019683")
 hs_prot= read_csv("raw_data/proteome/Human Prosser Paper/Limma_results_V1.csv")
 
 hs_prot <- hs_prot %>% 
@@ -206,7 +208,7 @@ joint_contrast_df %>%
          sig= FDR<0.05, 
          sig= ifelse(grepl("Rn|Mm", contrast_id) & logFC<log2(1.5), FALSE, sig)) # we added this as an additional requirement for animal models to be significant
 
-unique(joint_contrast_df$contrast_id)
+sort(unique(joint_contrast_df$contrast_id))
 
 ## add contrast category
 joint_contrast_df = 
@@ -218,177 +220,3 @@ joint_contrast_df =
 saveRDS(joint_contrast_df, "data/contrasts_query_df_untranslated2.rds")
 
 
-
-
-# create function for fisher p test ---------------------------------------
-source("sub/global.R")
-source("sub/helper.R")
-
-get_top_consistent_gene<-
-  function(joint_contrast_df,
-           query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
-           alpha= 0.05, 
-           cutoff= 15,
-           missing_prop= 10){
-    
-    
-    contrast_df_filt= joint_contrast_df %>% 
-      filter(contrast_id %in% query_contrasts)%>%
-      filter(FDR< alpha)
-    
-    # get overview of intersect
-    venns= table(contrast_df_filt$gene)
-    
-    x= split(contrast_df_filt$gene, contrast_df_filt$contrast_id)
-    x= lapply(x, unique)
-    
-    p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
-    
-    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
-    
-    df.msign= contrast_df_filt %>%
-      dplyr::select(gene, contrast_id, logFC)%>% 
-      filter(gene %in% intersect_genes) %>%
-      group_by(gene)%>% 
-      summarise(m.sign = mean(sign(logFC)))%>%
-      mutate(top_ = ifelse(m.sign== 1, "upregulated", 
-                           ifelse(m.sign ==-1 , "downregulated", "inconsistent")))
-    
-    top_up = df.msign %>%
-      filter(top_== "upregulated")%>% pull(gene)
-    
-    top_dn = df.msign %>%
-      filter(top_== "downregulated")%>% pull(gene)
-    
-    p.bar.intersect=
-      ggplot(df.msign, aes(x= factor(top_, levels = c("upregulated", 
-                                                      "downregulated", 
-                                                      "inconsistent"))))+
-      geom_bar()+
-      labs(x= "consistency of regulation")+
-      theme(axis.text.x = element_text(angle= 60, hjust= 1))
-    
-    p.int=  cowplot::plot_grid( p.venn,p.bar.intersect,
-                                ncol = 2, labels = c("A", 
-                                                     "B"), 
-                                rel_widths = c(1,0.3))
-    
-    # calculate the median normalized rank across contrasts
-    df.median= joint_contrast_df %>%
-      filter(contrast_id %in% query_contrasts,
-             gene %in% intersect_genes)%>% 
-      group_by(gene)%>%
-      summarise(m.r= mean(ranks3))
-    
-    df.full= df.median %>%
-      arrange(desc(m.r)) %>%
-      left_join(contrast_df_filt%>%
-                  dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")
-    
-    if(length(intersect_genes)!= 0){
-      top_dn2= df.median%>% filter(gene %in% top_dn) %>% arrange(desc(m.r))%>% slice(1:cutoff)%>% pull(gene)
-      top_up2= df.median%>% filter(gene %in% top_up) %>% arrange(m.r)%>% slice(1:cutoff)%>% pull(gene)
-      
-      p.top_gene_up=
-        df.full %>% 
-        filter(gene %in% c( top_up2))%>% 
-        mutate(gene= factor(gene, levels= c(top_up2)))%>%
-        ggplot(., 
-               aes(x= gene, y= logFC))+
-        geom_boxplot(outlier.colour = NA)+
-        geom_jitter(aes( color= contrast_id))+
-        theme(axis.text.x = element_text(angle= 60 , hjust= 1))
-      #geom_hline(yintercept = 0)
-      
-      p.top_gene_dn=
-        df.full %>% 
-        filter(gene %in% c(top_dn2 ))%>% 
-        mutate(gene= factor(gene, levels= c(top_dn2 )))%>%
-        ggplot(., 
-               aes(x= gene, y= logFC))+
-        geom_boxplot(outlier.colour = NA)+
-        geom_jitter(aes( color= contrast_id))+
-        theme(axis.text.x = element_text(angle= 60 , hjust= 1))
-      #geom_hline(yintercept = 0)      
-      
-      p.top_genes = cowplot::plot_grid(p.top_gene_up, p.top_gene_dn, 
-                                       ncol = 1,
-                                       labels= c("top upregulated", 
-                                                 "top downregulated"))
-      
-      ##add hmap
-      plot.genes= unique(c(top_dn, top_up))
-      
-      mat= joint_contrast_df %>% 
-        dplyr::select(contrast_id, gene,  logFC)%>%
-        filter(gene %in% plot.genes,
-               contrast_id %in% query_contrasts)%>%
-        pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
-        as.data.frame()%>%
-        filter(!is.na(gene))%>%
-        column_to_rownames("gene")
-      col_names_plot= c(top_dn2, top_up2)
-      
-      na_sums_per_row <- apply(mat, 1, function(row) sum(is.na(row)))
-      mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
-      
-      x= rownames(mat_subset)
-      x[!x %in% col_names_plot] <- ""
-      
-      hmap_top <- ComplexHeatmap::Heatmap(t(mat_subset),
-                                          #rect_gp = gpar(fill = "grey", lwd = 1),
-                                          name = "logFC", 
-                                          na_col = "black",
-                                          border_gp = gpar(col = "black", lty = 1),
-                                          cluster_columns = T,
-                                          cluster_rows= T, 
-                                          
-                                          column_labels = x,
-                                          column_names_gp = gpar(fontsize = 9),
-                                          row_names_side = "left",
-                                          row_dend_side = "left"
-                                          
-      )
-      
-    }else{ 
-      p.top_genes= NULL
-      hmap_top <- NULL
-    }
-    
-    ## add hmap= 
-    
-    
-    
-    
-    return(list(p.hist=p.int, 
-                genes= list("i"= intersect_genes, 
-                            "u"= top_up, 
-                            "d"= top_dn),
-                df= df.full, 
-                p.top_genes= p.top_genes,
-                hmap_top= hmap_top
-    ))
-  }
-
-
-run_fisher_meta = function(meta_list, n_missing = 3){
-  library(survcomp)
-  # Getting p-values from limma
-  limma_pvals = get_all_limma(meta_list = meta_list, "adj.P.Val")
-  
-  # Use only genes that are present in all experiments (missing in n at most)
-  limma_results_mat = limma_pvals[rowSums(is.na(limma_pvals))<=n_missing,]
-  
-  # Fisher combined test
-  fisher_pvals = apply(limma_results_mat, 1, function(x){ 
-    survcomp::combine.test(x, "fisher", na.rm = T)
-  })
-  
-  fisher_pvals_adj = sort(p.adjust(fisher_pvals,"BH"))
-  
-  return(fisher_pvals_adj)
-}
-
-
-df.full %>%
-  select(gene, FDR)

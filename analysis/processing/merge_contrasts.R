@@ -212,6 +212,8 @@ joint_contrast_df =
          cc= ifelse(grepl("fetal", contrast_id), "D", cc),
          cc= ifelse(grepl("HCM", contrast_id), "B", cc))
 
+## we will add the modal, model and tp data 
+
 
 saveRDS(joint_contrast_df, "data/contrasts_query_df_untranslated2.rds")
 

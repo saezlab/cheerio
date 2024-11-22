@@ -217,7 +217,7 @@ plot_logfc_gene = function(red_contrast_df,
     geom_col(width= 0.4, color ="black") +
     theme_cowplot()+
     scale_x_discrete(drop=FALSE)+
-    scale_fill_manual(values = c("TRUE" = "#942911",
+    scale_fill_manual(values = c("TRUE" = "#4D7298",
                                  "FALSE"="darkgrey", 
                                  drop= FALSE))+
     labs(x = "", y = "log fold change", fill = "FDR<0.05") +
@@ -238,24 +238,43 @@ plot_logfc_gene = function(red_contrast_df,
 
   if(!is.null(fg_name)){
     p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")
-    # this code is to make every facet label in a different color: 
-    # credits to https://github.com/tidyverse/ggplot2/issues/2096
-    g <- ggplot_gtable(ggplot_build(p1))
-    stripr <- which(grepl('strip-r', g$layout$name))
-    fills <- c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
-    k <- 1
-    for (i in stripr) {
-      j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
-      g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-      k <- k+1
-    }
-    #grid.draw(g)
-    #p1 <- ggplotify::as.ggplot(~grid.draw(g)) 
-    p1<- ggpubr::as_ggplot(g)
+    
+    p1 = make_colorful_facet_labels(p1)
+    p1
+    # g <- ggplot_gtable(ggplot_build(p1))
+    # stripr <- which(grepl('strip-r', g$layout$name))
+    # fills <- c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
+    # k <- 1
+    # for (i in stripr) {
+    #   j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+    #   g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+    #   k <- k+1
+    # }
+    # #grid.draw(g)
+    # #p1 <- ggplotify::as.ggplot(~grid.draw(g))
+    # p1<- ggpubr::as_ggplot(g)
   }
   return(list("p"= p1, "leg"= legend))
 }
 
+make_colorful_facet_labels <- function(p1,
+                                        fills = c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
+                                        ){
+  require(ggpubr)
+  # this code is to make every facet label in a different color: 
+  # credits to https://github.com/tidyverse/ggplot2/issues/2096
+  g <- ggplot_gtable(ggplot_build(p1))
+  stripr <- which(grepl('strip-r', g$layout$name))
+  k <- 1
+  for (i in stripr) {
+    j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+    g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+    k <- k+1
+  }
+  #grid.draw(g)
+  p1<- ggpubr::as_ggplot(g)
+  return(p1)
+}
 
 
 ## this function plots a linear model with response variable 
@@ -321,6 +340,9 @@ plot_hw_association_lm= function(HW_DF,
 ## with response variable heart weight. 
 plot_hw_association= function(HW_DF, 
                               genes){
+  
+  coef_vec<- HW_DF%>%
+    filter(gene %in% genes )%>% pull(logcpm_coef)
   p= map(genes , function(x){
     #map(c("rna", "ribo"), function(y){
     
@@ -356,7 +378,8 @@ plot_hw_association= function(HW_DF,
           scale_color_gradient(low= "grey", high= "red", limits = c(0, 1))+
           labs(x= "", y= "Coefficient",
                shape = "", 
-               color = "R²")
+               color = "R²")+
+          ylim(c(min(coef_vec), max(coef_vec)))
       )
     }
   })
@@ -379,18 +402,26 @@ plot_hw_association= function(HW_DF,
   return(final_plot)
 }
 
-plot_transcipt_translat_corr= function(plot.df 
-){
-  plot.df %>% 
-  ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
-    facet_grid(rows= vars(model), 
-               cols= vars(timepoint))+
+plot_transcipt_translat_corr= function(to_plot_df){
+  to_plot_df %>% 
+    #filter(model!= "PE")%>%
+    arrange((labels))%>%
+    drop_na()%>%
+    ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
+    { # Conditional facet_grid based on column presence
+      if ("timepoint" %in% colnames(to_plot_df)) {
+        facet_grid(rows = vars(model), cols = vars(timepoint))  # Facet by timepoint if it exists
+      } else {
+        facet_grid(rows = vars(model))  # Only facet by model if timepoint does not exist
+      }
+    } +
     geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
     geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
-    geom_point(show.legend = T)+
-    scale_colour_manual("genes", values= myColors)+
-    geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4)+
+    geom_point(aes(colour=labels))+ 
+    #geom_point(shape = 1, colour = "grey")+
+    scale_color_manual("genes", values= myColors)+
     scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
+    geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4, alpha= 0.8)+
     scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
     #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
     theme(panel.grid.major = element_line(color = "grey",
@@ -402,7 +433,9 @@ plot_transcipt_translat_corr= function(plot.df
           axis.title = element_text(size= 10)) +
     labs(alpha= "")+
     xlab("logFC - transcriptome")+
-    ylab("logFC - translatome")
+    ylab("logFC - translatome")+
+    guides(color = guide_legend(override.aes = list(size = 5))) 
+
 }
 
 

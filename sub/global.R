@@ -77,9 +77,36 @@ TFs= sapply(df_tf, function(x){
 ipmc_data= readRDS("app_data/ipmc_data.rds")
 
 # heart weight data:
-# this was the old data frame with expression data
-#HW_DF= readRDS("app_data/heart_weight_gex.rds")
+
 # this one contains precalculated models
 HW_DF= readRDS("app_data/heart_weight_precalc.rds")
 
+
+
+
+# app stuff ---------------------------------------------------------------
+
 error_text = "Queried gene(s) were not captured\nin data"
+
+
+myColors1 <- c("grey", "#4E5D6C",  # Stronger blue-gray
+              "#6A7F8A",  # Deep teal-gray
+              "#A4827F",  # Muted terracotta
+              "#3C6E71",  # Muted teal
+              "#556B2F",  # Dark olive green
+              "#8B687F")  # Muted mauve
+
+myColors <- c("grey", "#4A90A4",  # Brighter teal-blue
+                      "#6F9F8A",  # Light teal-green
+                      "#E29F91",  # Soft coral-pink
+                      "#3A6EA5",  # Rich blue
+                      "#5B8C5A",  # Brighter olive green
+                      "#AB82A4")  # Soft lavender
+# Display the colors in R
+
+myColors_soft <- c("#6A7D8A",  # Muted blue-gray
+                   "#A0AAB2",  # Soft gray
+                   "#D1C6AD",  # Soft beige
+                   "#8C6E63",  # Muted brown
+                   "#667C60",  # Muted olive green
+                   "#A67D74")  # Muted pink-brown

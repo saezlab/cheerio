@@ -17,88 +17,42 @@ server = function(input, output, session) {
 # cardiac mouse hypertrophy show correlation between transcript and translatome:  
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) ){
+    
+    #filter for selected genes and contrast
     to_plot_df= joint_contrast_df %>% 
       ungroup()%>%
-      filter( grepl(pattern = "Mm|Rn", contrast_id))%>%
-      mutate(#gene= str_to_title(gene),
-            model= factor(ifelse(grepl("tac", contrast_id), "tac", 
-                                  ifelse(grepl("swim", contrast_id ),
-                                         "swim", 
-                                         "invitro")),levels= c("swim", "tac", "invitro")), 
-             modality = factor(ifelse(grepl("rna", contrast_id), "transcriptome", "translatome")), 
-             timepoint = factor(ifelse(grepl("2d", contrast_id), "2d", 
-                                       ifelse(grepl("2wk", contrast_id), "2wk","none" ))) )%>% 
-      select( model,modality, timepoint,gene, logFC)%>%
-      pivot_wider(names_from= modality, values_from = logFC, values_fn= mean)%>%
+      filter( grepl(pattern = "mm|rn", contrast_id))%>%
+      select( model,modal, timepoint,gene, logFC)%>%
+      filter(modal!= "proteome")%>%
+      pivot_wider(names_from= modal, values_from = logFC, values_fn= mean)%>%
       mutate(labels= ifelse(gene %in% input$select_gene, gene, "background"),
              labels= factor(labels, levels= c("background", input$select_gene)),
              alphas= factor(ifelse(labels=="background", "bg","normal"))
       )%>%
       arrange(desc(labels))
     
-    # get colors!
-      myColors <- c(brewer.pal(length(input$select_gene), "Spectral"), "grey")
-      names(myColors) <- levels(to_plot_df$labels)
-      myColors["background"]<- "grey"
-      
-      p1= to_plot_df %>% 
-        filter(model!= "invitro")%>%
-        arrange((labels))%>%
-        drop_na()%>%
-        ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
-        facet_grid(rows= vars(model), 
-                   cols= vars(timepoint))+
-        geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_point(aes(colour=labels))+ 
-        #geom_point(shape = 1, colour = "grey")+
-        scale_color_manual("genes", values= myColors)+
-        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
-        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4, alpha= 0.8)+
-        scale_size_manual(values=c("bg"= 0.5, "normal"= 2), guide = 'none')+
-        #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
-        theme(panel.grid.major = element_line(color = "grey",
-                                              linewidth = 0.1,
-                                              linetype = 1),
-              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
-              panel.grid.minor = element_blank(),
-              axis.text = element_text(size= 11), 
-              axis.title = element_text(size= 10)) +
-        labs(alpha= "")+
-        xlab("logFC - transcriptome")+
-        ylab("logFC - translatome")
-      p1
-      p2= to_plot_df %>% 
-        drop_na()%>%
-        filter(model== "invitro")%>%
-        ggplot(aes(x= transcriptome, y= translatome, color = labels, size= alphas, alpha= alphas))+
-        facet_grid(rows= vars(model))+
-        geom_hline(yintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_vline(xintercept = 0, color= "darkgrey", size= 0.4)+
-        geom_point(aes(colour=labels))+ 
-        geom_point(shape = 1, colour = "darkgrey")+
-        scale_color_manual("genes", values= myColors)+
-        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
-        geom_abline(slope= 1, intercept = 0, color= "black", size= 0.4, alpha= 0.8)+
-        scale_alpha_manual(values=c("bg"= 0.3, "normal"= 1), guide = 'none')+
-        scale_size_manual(values=c("bg"= 0.5, "normal"= 2.5), guide = 'none')+
-        #ggrepel::geom_label_repel(mapping= aes(label =labels ), max.overlaps = 1000, show.legend = F)+
-        theme(panel.grid.major = element_line(color = "grey",
-                                              linewidth = 0.1,
-                                              linetype = 1),
-              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
-              panel.grid.minor = element_blank(),
-              axis.text = element_text(size= 11), 
-              axis.title = element_text(size= 10),
-              legend.position = "none") +
-        labs(alpha= "")+
-        xlab("logFC - transcriptome")+
-        ylab("logFC - translatome")
-      
-      p= plot_grid(plot_grid(p2,NULL, ncol= 1),p1, ncol = 2, 
+    # assign colors!
+    myColors<- myColors[1:length(levels(to_plot_df$labels))]
+    names(myColors) <- levels(to_plot_df$labels)
+    
+    #mm models
+    p1 = plot_transcipt_translat_corr(to_plot_df %>% 
+                                        filter(model!= "PE"))
+    
+    #rat PE
+    p2 = plot_transcipt_translat_corr(to_plot_df %>% 
+                                        filter(model== "PE")%>%
+                                        select(-timepoint))
+    p2 <- remove_legend(p2)
+    # add colorful facet label    
+    p2= make_colorful_facet_labels(p2, "#FFE347")
+    p1 = make_colorful_facet_labels(p1)
+    
+    # join!
+    p= plot_grid(plot_grid(p2,NULL, ncol= 1),p1, ncol = 2, 
                    rel_widths = c(1,2.5),
                    labels= "AUTO")
-      return(p)
+    return(p)
   }
 })
 

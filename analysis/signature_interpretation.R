@@ -33,32 +33,47 @@ hm<- msigdbr(species = "Homo sapiens", category = "H")%>%
 C2<- msigdbr(species = "Homo sapiens", category = "C2")%>%
   distinct(gs_name, gene_symbol)
 
-msig_res= decoupleR::run_ulm(mat = pca.mat, net= hm%>% distinct(),.source = gs_name, .target = gene_symbol 
+msig_res_hm= decoupleR::run_ulm(mat = pca.mat, net= hm%>% distinct(),.source = gs_name, .target = gene_symbol 
                              )
 msig_res= decoupleR::run_ulm(mat = pca.mat, net= C2,.source = gs_name, .target = gene_symbol 
 )
 
 write.csv(msig_res, "data/misg_enriched_in_pca_loadings.csv")
 
-pways= msig_res %>%filter(statistic=="ulm") %>% mutate(p_adj= p.adjust(p_value))%>%
+pways= msig_res_hm %>%
+  filter(statistic=="ulm") %>%
+  #filter(condition=="PC1")%>%
+  mutate(p_adj= p.adjust(p_value))%>%
   group_by(condition, source)%>%
-  filter(any(p_adj<0.01))%>%
+  filter(any(p_adj<0.2))%>%
   pull(source
   )
-
-px= msig_res %>% mutate(p_adj= p.adjust(p_value)) %>%
+msig_res_hm%>% 
+  filter(grepl("INFL", source))
+px= msig_res_hm %>% 
+#  filter(condition=="PC1")%>%
+  mutate(p_adj= p.adjust(p_value)) %>%
   filter(source %in% pways)%>%
+  mutate(source= str_replace_all(source, "HALLMARK_", ""))%>%
   ggplot(aes(x=score, y= reorder(source,score), fill = condition))+
   facet_grid(~ condition)+
-  geom_col(aes(color= p_adj<0.01))+
+  geom_col(aes(color= p_adj<0.1), fill = "darkgrey", width= 0.7)+
   scale_color_manual(values= c("TRUE"= "black", "FALSE"= "white"))+
   theme_cowplot()+
-  theme(axis.text.y = element_text(size=10))+
-  geom_vline(xintercept = 0)
+  theme(axis.text.y = element_text(size=10), 
+        legend.position = "none")+
+  geom_vline(xintercept = 0)+
+  labs(x="Enrichment score", y="")
 px
-pdf("plots/big_pc_hmap.pdf_2",width= 20, height= 15)
+pdf("figures/pc1_small_es.pdf ",width= 5, height= 2.2)
 px
 dev.off()
+
+# 
+# 
+# pdf("plots/big_pc_hmap.pdf_2",width= 20, height= 15)
+# px
+# dev.off()
 
 
 msig_res_cm= decoupleR::run_ulm(mat = pca.mat, 
@@ -68,7 +83,7 @@ msig_res_cm= decoupleR::run_ulm(mat = pca.mat,
 
 pways= msig_res_cm %>%filter(statistic=="ulm") %>% mutate(p_adj= p.adjust(p_value))%>%
   group_by(condition, source)%>%
-  filter(any(p_adj<0.4))%>%
+  filter(any(p_adj<1))%>%
   pull(source
   )
 

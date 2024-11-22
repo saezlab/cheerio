@@ -7,11 +7,12 @@ library(ggdendro)
 c.df= readRDS("data/contrasts_query_df_translated3.rds")
 
 contrasts_oi <- c.df %>%
-  #filter(!grepl("DCMvsNF", contrast_id)) %>%
+  filter(!grepl("snRNA_", contrast_id) | grepl("snRNA_CM|snRNA_FB", contrast_id)) %>%
   filter(!grepl("HCMvsDCM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
+contrasts_oi
 
-
+c.df2<-c.df %>% filter(contrast_id %in% contrasts_oi)
 # plot histogram of contrasts and genes -----------------------------------
 
 length(unique(c.df$gene))
@@ -24,13 +25,15 @@ sum(contrast_comparisons$contrast_count >9)
 p.hist.counts <- contrast_comparisons%>% 
   ggplot(aes(x= contrast_count))+
   geom_histogram(bins = 30)+
-  scale_y_log10()+
+  #scale_y_log10()+
   labs(x= "number of contrasts", 
        y= "number of genes")+
   theme_cowplot()
 
+pdf("figures/histogram_number_of_contrasts.pdf", 
+    width= 3, height= 3)
 p.hist.counts
-
+dev.off()
 # plot contrast overview --------------------------------------------------
 
 #create a filtered version of the contrast data frame
@@ -58,7 +61,8 @@ bar_plot <- ggplot(count_df, aes(x = contrast_id, y = num_genes)) +
   theme(axis.text.x = element_blank(),
         axis.title.x = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.title.y = element_text(size = 10)) +
+        axis.title.y = element_text(size = 10)
+        ) +
   labs(y = "DEG\ncount")
 bar_plot
 # Main plot
@@ -89,12 +93,12 @@ combined_plot <- plot_grid(
   rel_heights = c(0.2, 1)
 )
 combined_plot
-
+c.df2 %>% filter(grepl("Endo", contrast_id))
 print(combined_plot)
 
-pdf(file = "pre_analysis/manhatten_plot.pdf", 
+pdf(file = "figures/lfc_jitter_plot.pdf", 
     height= 7, 
-    width=7)
+    width=5)
 print(combined_plot)
 dev.off()
 #
@@ -105,26 +109,28 @@ dev.off()
 
 p.coverag <- c.df%>% 
   distinct(contrast_id, n_genes)%>%
-  ggplot(., aes(x= reorder(contrast_id,max.ranks), y= n_genes))+
+  #count(contrast_id)%>%
+  ggplot(., aes(x= reorder(contrast_id,n_genes), y= n_genes))+
   geom_col()+
   coord_flip()+
   theme_cowplot()+
-  labs(y= "gene coverage", 
+  labs(y= "number of genes", 
        x= "")
 
 p.deg <- c.df %>%
+  group_by(contrast_id)%>%
   count(sig) %>%
   filter(sig)%>%
   ggplot(., aes(x= reorder(contrast_id,n), y= n))+
   geom_col()+
   coord_flip()+
-  theme_minimal()+
+  theme_cowplot()+
   labs(y= "number of DEGs", 
        x= "")
 
-pdf("plots/plot_coverage.pdf",
+pdf("figures/plot_coverage.pdf",
     width = 15, 
-    height= 10)
+    height= 9)
 plot_grid(p.coverag, p.deg)
 dev.off()
 

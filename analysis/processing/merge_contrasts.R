@@ -69,6 +69,10 @@ sc.gex <- read_csv("data/chaffinetal_degs.csv")%>%
   rename(gene= Gene)%>%
   mutate(contrast_id = paste("Hs_sc",Comparison, Cell_type, sep= "_"))%>%
   dplyr::select(contrast_id, gene, logFC, pval , FDR)
+
+sc.gex%>%
+  filter(grepl("Endothelial I", contrast_id))
+  
 # 
 # sc.gex= read.csv("data/sc_gex_chaffin.csv")%>% 
 #   as_tibble()%>%
@@ -142,6 +146,7 @@ tac_prot <- tac_prot %>%
          pval = pvalue.limma)%>%
   dplyr::select(contrast_id,  gene,logFC, pval, FDR)
 tac_prot%>% filter(gene=="ENSMUSP00000019683")
+
 hs_prot= read_csv("raw_data/proteome/Human Prosser Paper/Limma_results_V1.csv")
 
 hs_prot <- hs_prot %>% 
@@ -165,8 +170,8 @@ hs_prot$contrast_id<-  str_replace_all(hs_prot$contrast_id,
                                        replacement = "Hs_bulk_prot_DCMvsNF" )
 hs_prot<-hs_prot %>% filter(contrast_id %in% c("Hs_bulk_prot_cHypvsNF",
                                       "Hs_bulk_prot_HCMrEFvsNF",
-                                      "Hs_bulk_prot_HCMpEFvsNF",
-                                      "Hs_bulk_prot_DCMvsNF"))
+                                      "Hs_bulk_prot_HCMpEFvsNF"))
+                                      #"Hs_bulk_prot_DCMvsNF"))
 
 unique(hs_prot$contrast_id)
 

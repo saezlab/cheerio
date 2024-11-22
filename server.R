@@ -144,6 +144,12 @@ output$gene_expression_plots = renderPlot({
 
 # Mouse heart weight: 
 
+# output$heart_weight_plot= renderPlot({
+#   if (!is.null(input$select_gene) )  {
+#     plot_hw_association(HW_DF, genes = input$select_gene)
+#   }
+# })
+
 output$heart_weight_plot= renderPlot({
   if (!is.null(input$select_gene) )  {
     plot_hw_association(HW_DF, genes = input$select_gene)

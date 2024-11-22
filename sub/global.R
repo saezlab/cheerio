@@ -67,14 +67,14 @@ df_tf= readRDS("app_data/dorothea_results_all.rds")
 
 
 #contrast query:
-joint_contrast_df= readRDS( "app_data/contrasts_query_df.rds")
-
+#joint_contrast_df= readRDS( "app_data/contrasts_query_df.rds")
+joint_contrast_df= readRDS( "data/contrasts_query_df_translated3.rds")
 
 TFs= sapply(df_tf, function(x){
   unique(toupper(x$source))
 })%>% unlist(use.names = F)%>% unique()
 
 ipmc_data= readRDS("app_data/ipmc_data.rds")
-HW_DF= readRDS("app_data/heart_weight_gex.rds")
-
+#HW_DF= readRDS("app_data/heart_weight_gex.rds")
+HW_DF= readRDS("app_data/heart_weight_precalc.rds")
 error_text = "Queried gene(s) were not captured\nin data"

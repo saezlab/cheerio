@@ -9,13 +9,11 @@
 ## Purpose of script:
 ##
 ## breakdown programs
-
 library(tidyverse)
 library(cowplot)
 library(lsa)
 library(ComplexHeatmap)
 library(circlize)
-
 library(ggrepel)
 
 c.df= readRDS("data/contrasts_query_df_translated3.rds")
@@ -39,7 +37,7 @@ get_boxplot_from_matrix<- function(mtx){
     theme(axis.text.x = element_text(angle= 90, vjust= 0.5, hjust= 1))+
     labs(x= "")
 }
-
+contrast_oi<- contrast_mm 
 unsupervised_wrapper<- function(c.df, 
                                 contrast_oi){
   wide_lfc= c.df %>%
@@ -65,6 +63,27 @@ unsupervised_wrapper<- function(c.df,
   cl= hclust(as.dist(1-d))
   plot(cl, main = "", xlab = "")
   
+  # Perform hierarchical clustering
+  hc <- hclust(as.dist(1 - d))
+  
+  # Convert clustering to a dendrogram object
+  dendro_data <- dendro_data(as.dendrogram(hc))
+  
+  # Plot using ggplot2
+  p.dend<- ggplot(segment(dendro_data)) +
+    geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) +
+    geom_text(data = label(dendro_data),
+              aes(x = x, y = -0.05, label = label), # y = 0 to align labels at the same baseline
+              hjust = 1, angle = 90, size = 3.5) + # Customize text size and angle
+    theme_bw() +
+    labs(title = "",
+         x = "",
+         y = "Height") +
+    theme(axis.text.x = element_blank(), # Remove x-axis text
+          axis.ticks = element_blank(),
+          plot.margin = margin(20, 20, 120, 20, "pt"),
+          panel.border = element_blank())+
+    coord_cartesian(clip = 'off') # Remove x-axis ticks
   ## correlation
   
   d= cor(wide_lfc, method = "pearson")
@@ -75,13 +94,20 @@ unsupervised_wrapper<- function(c.df,
                                      col= col_fun, 
                                      column_names_max_height= unit(20, "cm"),
                                      row_names_max_width= unit(10, "cm"),
+                                     column_dend_height = unit(40, "mm"),
+                                     column_names_side = "top",
+                                     border = TRUE,
+                                     border_gp = gpar(col = "black"),
                                      #rect_gp = gpar(col = "#303030", lwd = 2,size=2)  # Set the border color
                                      rect_gp = gpar(col = "white", lwd = 1)  # Set the border color
   )
   print(corr.hmap)
   print(dim(wide_lfc))
   
-  return(wide_lfc)
+  return(list("lfc_mtx"= wide_lfc, 
+              "p.den"= p.dend, 
+              "p.hmap"= corr.hmap)
+         )
 }
 
 ## define contrasts of interest
@@ -98,52 +124,67 @@ contrast_hyp2 = c(contrast_hyp2, "hs_HCMvsNF_snRNA_CM",
 ##MAON CONTRAST no proteomes
 contrast_hyp <- contrast_hyp2[!grepl("prot", contrast_hyp2)]
 
-
 # compare all proteomics data:
 contrast_prot <- unique(c.df$contrast_id[grepl("prot", c.df$contrast_id)])
 
 #compare all animal models
 contrast_mm <- unique(c.df$contrast_id[grepl("mm|rn", c.df$contrast_id)])
 
-
-#### RUN 
-mm_res <- unsupervised_wrapper(c.df,contrast_mm )
-
-cor.test(mm_res[,"Mm_swim_prot_2wk"], mm_res[,"Mm_tac_prot_2wk"])
-
-#compare all human data
-contrast_hs <- unique(c.df$contrast_id[grepl("hs", c.df$contrast_id)])
-
-contrasts_oi <- c.df %>%
-  filter(!grepl("HCMvsDCM|snR", contrast_id)) %>%
-  filter(grepl("hs", contrast_id)) %>%
-  pull(contrast_id)%>% unique()
-hs_res <- unsupervised_wrapper(c.df,contrasts_oi )
-
 ## cross species
 contrast_cs <- c.df %>%
-  filter(!grepl("prot|snR", contrast_id)) %>%
-  #filter(grepl("mm_TAC", contrast_id)) %>%
+  #filter(!grepl("prot|snR", contrast_id)) %>%
+  filter(!grepl("snR", contrast_id)) %>%
+  filter(!grepl("snR", contrast_id) | grepl("HCMvsNF_snRNA_CM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 contrast_cs
 
 cs_res <- unsupervised_wrapper(c.df,contrast_cs )
+dim(cs_res$lfc_mtx)
+pdf("figures/corr_hmap_cross_species.pdf",
+    width= 7, height= 7.5)
+cs_res$p.hmap
+dev.off()
 
-contrast_cs <- c.df %>%
+#### RUN 
+mm_res <- unsupervised_wrapper(c.df,contrast_mm )
+dim(mm_res$lfc_mtx)
+pdf("figures/corr_hmap_animal.pdf",
+    width= 5, height= 6)
+  mm_res$p.hmap
+dev.off()
+
+cor.test(mm_res$lfc_mtx[,"Mm_swim_prot_2wk"], mm_res$lfc_mtx[,"Mm_tac_prot_2wk"])
+
+#compare all human data
+contrast_hs <- c.df %>%
+  #filter(!grepl("prot|snR", contrast_id)) %>%
+  filter(grepl("hs", contrast_id)) %>%
+  filter(!grepl("snR|HCMvsDCM", contrast_id))%>%
+  pull(contrast_id)%>% unique()
+contrast_hs
+contrast_hs <- unique(c.df$contrast_id[grepl("hs", c.df$contrast_id)])
+
+hs_res <- unsupervised_wrapper(c.df,contrast_hs )
+dim(hs_res$lfc_mtx)
+pdf("figures/corr_hmap_hs.pdf",
+    width= 5, height= 6)
+hs_res$p.hmap
+dev.off()
+
+
+
+contrast_cm <- c.df %>%
   filter(!grepl("prot|snR|ribo|HFvsNF", contrast_id)) %>%
   #filter(grepl("mm_TAC", contrast_id)) %>%
   pull(contrast_id)%>% unique()
-contrast_cs
-
-
-
-contrast_cm = c(contrast_cs, "hs_HCMvsNF_snRNA_CM")
+contrast_cm
+contrast_cm = c(contrast_cm, "hs_HCMvsNF_snRNA_CM")
 cm_res <- unsupervised_wrapper(c.df,contrast_cm )
 
 # PCA  --------------------------------------------------------------------
-cm_res_scaled = t(scale((cm_res), center=T, scale = T))
+cm_res_scaled = t(scale((cm_res$lfc_mtx), center=T, scale = T))
 
-p1<- get_boxplot_from_matrix(cm_res)
+p1<- get_boxplot_from_matrix(cm_res$lfc_mtx)
 p2<- get_boxplot_from_matrix(t(cm_res_scaled))
 p.lfc<-cowplot::plot_grid(p1+labs(y= "log2FC"), p2+labs(y = "scaled log2FC"), align ="h")
 
@@ -170,6 +211,9 @@ plot_pca= function(p.df,
   #RColorBrewer::display.brewer.pal(5, "qual")
   x_col= paste0("PC", pc_x)
   y_col= paste0("PC", pc_y)
+  my_palette <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+                  "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
+  
   p.df %>% 
     ggplot(aes(x = !!rlang::ensym(x_col),
                y = !!rlang::ensym(y_col), 
@@ -177,9 +221,10 @@ plot_pca= function(p.df,
                color= c.id,
                label = c.id))+
     #geom_text(alpha= 0.6, color="black")+
-    geom_text_repel(alpha= 0.6)+
+    geom_text_repel(alpha= 0.6, force_pull = 0.01)+
     geom_point(size= 3)+
     theme_cowplot()+
+    scale_color_manual(values= my_palette)+
     #scale_color_brewer(type="qual", palette=2)+
     theme(axis.line = element_blank())+
     labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
@@ -190,16 +235,18 @@ plot_pca= function(p.df,
 }
 
 p1= plot_pca(p.df, 1,2)
-#p1= plot_pca(p.df, 5,6)
+p2= plot_pca(p.df, 3,4)
 p1
+pdf("figures/PCA.pdf",
+    width= 6, height= 4)
+p1
+dev.off()
 
+p2
 legend <- get_legend(
   # create some space to the left of the legend
   p1 + theme(legend.box.margin = margin(0, 0, 0, 12))
 )
-
-p2= plot_pca(p.df, 3,4)
-p2
 
 plot_grid(p1+theme(legend.position = "none"),
           p2+theme(legend.position = "none"),
@@ -214,19 +261,32 @@ p1
 dev.off()
 
 ##screeplot
-map(PCA$sdev, function(x){
+expl_var<-map(PCA$sdev, function(x){
   round(x^2/sum(PCA$sdev^2)*100, 3)
-})%>% unlist()%>% plot()
+})%>% unlist()
 
+names(expl_var)= paste0("PC ", 1:length(expl_var))
+p.scree<-enframe(expl_var)%>%
+  ggplot(aes(x= name, y= value))+
+  geom_col(width = 0.7)+
+  theme_cowplot()+
+  labs(x="", y= "Explained variance (%)")+
+  theme(axis.text.x = element_text(angle= 90, hjust = 0, vjust = 0.5))
+
+p.scree
+pdf("figures/pca_screeplot.pdf",
+    width = 3, height= 3)
+p.scree
+dev.off()
 
 ## for CM comparison. pathologic hypertrophy on PC1 (negative) 
 ## and species on PC2 negative is mouse
 ## Q which are the genes that are species independent on pathologic hypertrophy
 
-
-p.pcaloadings= PCA$rotation[,1:5] %>% 
+p.pcaloadings= PCA$rotation[,1:9] %>% 
   as_data_frame() %>% 
   mutate(gene= rownames(PCA$rotation))
+
 saveRDS(p.pcaloadings, "data/pcaloadings.rds")
 
 g.u<- p.pcaloadings%>% 
@@ -242,22 +302,35 @@ g.d<- p.pcaloadings%>%
 g.b <- 
   p.pcaloadings%>% 
   #arrange((PC1))%>% 
-  filter(abs(PC2)<0.01)%>%
-  slice_min(order_by = PC1, n= 40)%>% pull(gene)
+  filter(abs(PC2)<0.05)%>%
+  slice_max(order_by = PC1, n= 40)%>% pull(gene)
 
 cs <- c.df %>% 
   filter(!grepl("snR|prot", contrast_id) | grepl("F_snRNA_CM", contrast_id))%>% 
   pull(contrast_id) %>% 
   unique()
 
+t(cm_res_scaled)[g.d, ]%>%
+  as.data.frame()%>%
+  rownames_to_column("gene")%>%
+  pivot_longer(-gene)%>%
+  ggplot(., 
+         aes(x= gene, y= value))+
+  geom_hline(yintercept = 0)+ 
+  geom_boxplot(outlier.colour = NA)+
+  geom_jitter(aes( #shape= animal, 
+                   color= name))+
+  theme(axis.text.x = element_text(angle= 60 , hjust= 1))
 get_box<- function(c.df, genes, c.ids){
   c.df %>% 
     filter(gene %in% c( genes),
            contrast_id %in% c.ids)%>% 
     mutate(animal= !grepl("hs", contrast_id))%>%
-    mutate(gene= factor(gene, levels= c(genes)))%>%
+    mutate(gene= factor(gene, levels= c(genes)))  %>%
+    group_by(contrast_id)%>%
+    mutate(scale_lfc= scale(logFC))%>%
     ggplot(., 
-           aes(x= gene, y= logFC))+
+           aes(x= gene, y= scale_lfc))+
     geom_hline(yintercept = 0)+ 
     geom_boxplot(outlier.colour = NA)+
     geom_jitter(aes( shape= animal, 
@@ -265,8 +338,14 @@ get_box<- function(c.df, genes, c.ids){
     theme(axis.text.x = element_text(angle= 60 , hjust= 1))
   
 }
-get_box(c.df , g.b, cs)
-get_hmap2(c.df, g.d, cs)
+
+get_box(c.df , g.b, contrast_cm)
+get_hmap2(c.df, g.b, contrast_cm)
+
+get_box(c.df , g.d, contrast_cm)
+get_hmap2(c.df, g.d, contrast_cm)
+
+
 c.df %>% 
   mutate(animal= !grepl("hs", contrast_id))%>%
   filter(gene %in% c( g.u),
@@ -321,8 +400,8 @@ get_hmap2<- function(c.df, genes, c.ids){
   hmap_top
 }
 
-plot_hmap2(c.df, g.u, cs)
-plot_hmap2(c.df, g.d, cs)
+get_hmap2(c.df, g.u, cs)
+get_hmap2(c.df, g.d, cs)
 #geom_hline(yintercept = 0)
 p.pcaloadings%>%
   ggplot(., aes(x= PC3, y= PC4))+
@@ -536,7 +615,8 @@ get_top_consistent_gene<-
       col_names_plot= c(top_dn2, top_up2)
       
       na_sums_per_row <- apply(mat, 1, function(row) sum(is.na(row)))
-      mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
+      mat_subset <- mat
+      #mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
       
       x= rownames(mat_subset)
       x[!x %in% col_names_plot] <- ""
@@ -582,19 +662,19 @@ c.df %>%
   distinct(contrast_id, x)%>% 
   print(n=100)
 
-
+contrast_hyp2<- contrast_hyp2[!grepl("rn", contrast_hyp2)]
 
 # query_contrasts<- contrast_hyp2
 
 c_hyp= get_top_consistent_gene(joint_contrast_df = c.df, 
                                query_contrasts =contrast_hyp, 
-                               missing_prop = 90,
-                               cutoff= 15)
+                               missing_prop = 80,
+                               cutoff= 200)
 
 c_hyp2= get_top_consistent_gene(joint_contrast_df = c.df, 
                                 query_contrasts =contrast_hyp2,
                                 cutoff= 50, 
-                                missing_prop = 70 )
+                                missing_prop = 90 )
 
 pdf("figures/hmap_lfc_cross_modal.pdf", 
     width= 7, height= 2.4)
@@ -607,6 +687,19 @@ dev.off()
 
 # now add fisher p_value
 p_hyp= pull_fisher_p(contrast_hyp, c.df, 80)
+
+sig <- p_hyp %>% 
+  filter(fisher_p_adj<0.05)%>%
+  slice_min(n=500, fisher_p_adj)%>%
+  pull(gene)
+
+get_hmap2(c.df = c.df, c.ids = contrast_hyp, genes = sig)
+##add hmap
+
+
+plot.genes= unique(c(top_dn, top_up))
+
+
 p_hyp2= pull_fisher_p(contrast_hyp2, c.df, 70)
 
 #combine w fisher p

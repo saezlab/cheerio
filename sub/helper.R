@@ -239,8 +239,9 @@ p1
 
 
 
-
-plot_hw_association= function(HW_DF, 
+## this function plots a linear model with response variable 
+## heart weight. Requires gex data frame
+plot_hw_association_lm= function(HW_DF, 
                               genes,
                               my.formula = y~x){
   p= map(genes , function(x){
@@ -296,7 +297,56 @@ plot_hw_association= function(HW_DF,
   p1= cowplot::plot_grid(plotlist = p)
   p1
 }
+#input = list("select_gene"= c("NPPA", "NPPB"))
+#genes = input$select_gene
 
+
+## this function plots results of a precalculated linear model
+## with response variable heart weight. 
+plot_hw_association= function(HW_DF, 
+                              genes,
+                              my.formula = y~x){
+  p= map(genes , function(x){
+    #map(c("rna", "ribo"), function(y){
+    
+    to_plot_df<- HW_DF %>%
+      filter(gene == x )
+    
+    if(dim(to_plot_df)[1]<1){
+      error_text2 <- paste(x , "\nwas not captured\nin data" )
+      return(
+        ggplot() + 
+          annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+          theme_void()   
+      )
+    }else{
+      return(
+        to_plot_df %>%
+          mutate(group= paste(model, tp,  sep = "_"), 
+                 significant= ifelse(FDR<0.05, "s", "ns"))%>%
+          ggplot(aes(x= group, y= logcpm_coef, 
+                     #size= -log10(logcpm_p_value),
+                     color= R2, 
+                     shape= significant))+
+          geom_point(show.legend = T,
+                     size= 3)+
+          facet_grid(~gene_orig)+
+          theme(axis.text.x= element_text(angle= 90, hjust= 1, vjust = 0.5),
+                panel.grid.major = element_line(color = "gray80", size = 0.5), # Major grid lines
+                panel.grid.minor = element_line(color = "gray90", size = 0.25)  # Minor grid lines
+          )+
+          geom_hline(yintercept = 0)+
+          scale_shape_manual(values = c(15, 16))+
+          #scale_size_continuous(range = c(1, 8))+
+          scale_color_gradient(low= "grey", high= "red", limits = c(0, 1))+
+          labs(x= "", y= "Coefficient", shape = "")
+      )
+    }
+  })
+  
+  p1= cowplot::plot_grid(plotlist = p)
+  p1
+}
 
 plot_transcipt_translat_corr= function(plot.df 
 ){

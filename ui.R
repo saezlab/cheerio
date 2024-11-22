@@ -82,7 +82,7 @@ ui = function(request) {
                      h4("Explore posible associations of genetic variants with mouse phenotypes"),
                      br(),
                      p(br()),
-                     plotOutput("heart_weight_plot", width = "100%", height = "800px")%>%
+                     plotOutput("heart_weight_plot", width = "100%", height = "400px")%>%
                        withSpinner(),
                      br(),
                      ##ipmc table

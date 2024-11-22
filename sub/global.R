@@ -75,6 +75,11 @@ TFs= sapply(df_tf, function(x){
 })%>% unlist(use.names = F)%>% unique()
 
 ipmc_data= readRDS("app_data/ipmc_data.rds")
+
+# heart weight data:
+# this was the old data frame with expression data
 #HW_DF= readRDS("app_data/heart_weight_gex.rds")
+# this one contains precalculated models
 HW_DF= readRDS("app_data/heart_weight_precalc.rds")
+
 error_text = "Queried gene(s) were not captured\nin data"

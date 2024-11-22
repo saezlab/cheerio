@@ -201,7 +201,7 @@ get_top_consistent_gene<-
 #' 
 #' @return A single gene plot for multiple contrasts (ggplot object)
 
-plot_logfc_gene = function(joint_contrast_df, 
+plot_logfc_gene = function(red_contrast_df, 
                            x_column= "contrast_id", 
                            y_column= "logFC", 
                            fg_name= NULL, 
@@ -211,13 +211,13 @@ plot_logfc_gene = function(joint_contrast_df,
   if(min_fc>0){min_fc= 0}
   if(max_fc<0){max_fc= 0}
   
-  p1= joint_contrast_df %>%
+  p1= red_contrast_df %>%
   ggplot(aes(x = !!rlang::ensym(x_column), y = !!rlang::ensym(y_column), fill = sig)) +
     geom_hline(yintercept = 0, color= "black")+
     geom_col(width= 0.4, color ="black") +
     theme_cowplot()+
     scale_x_discrete(drop=FALSE)+
-    scale_fill_manual(values = c("TRUE" = "darkgreen",
+    scale_fill_manual(values = c("TRUE" = "#942911",
                                  "FALSE"="darkgrey", 
                                  drop= FALSE))+
     labs(x = "", y = "log fold change", fill = "FDR<0.05") +
@@ -232,9 +232,28 @@ plot_logfc_gene = function(joint_contrast_df,
     coord_flip()+
     ggtitle(gene)+
     ylim(c(min_fc, max_fc))
-p1  
-  if(!is.null(fg_name)){p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")}
-  p1
+  
+  legend <- cowplot::get_legend(p1)
+  p1 <- remove_legend(p1)
+
+  if(!is.null(fg_name)){
+    p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")
+    # this code is to make every facet label in a different color: 
+    # credits to https://github.com/tidyverse/ggplot2/issues/2096
+    g <- ggplot_gtable(ggplot_build(p1))
+    stripr <- which(grepl('strip-r', g$layout$name))
+    fills <- c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
+    k <- 1
+    for (i in stripr) {
+      j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
+      g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+      k <- k+1
+    }
+    #grid.draw(g)
+    #p1 <- ggplotify::as.ggplot(~grid.draw(g)) 
+    p1<- ggpubr::as_ggplot(g)
+  }
+  return(list("p"= p1, "leg"= legend))
 }
 
 
@@ -297,15 +316,11 @@ plot_hw_association_lm= function(HW_DF,
   p1= cowplot::plot_grid(plotlist = p)
   p1
 }
-#input = list("select_gene"= c("NPPA", "NPPB"))
-#genes = input$select_gene
-
 
 ## this function plots results of a precalculated linear model
 ## with response variable heart weight. 
 plot_hw_association= function(HW_DF, 
-                              genes,
-                              my.formula = y~x){
+                              genes){
   p= map(genes , function(x){
     #map(c("rna", "ribo"), function(y){
     
@@ -321,7 +336,7 @@ plot_hw_association= function(HW_DF,
       )
     }else{
       return(
-        to_plot_df %>%
+        g<- to_plot_df %>%
           mutate(group= paste(model, tp,  sep = "_"), 
                  significant= ifelse(FDR<0.05, "s", "ns"))%>%
           ggplot(aes(x= group, y= logcpm_coef, 
@@ -330,7 +345,7 @@ plot_hw_association= function(HW_DF,
                      shape= significant))+
           geom_point(show.legend = T,
                      size= 3)+
-          facet_grid(~gene_orig)+
+          ggtitle(paste0(x))+
           theme(axis.text.x= element_text(angle= 90, hjust= 1, vjust = 0.5),
                 panel.grid.major = element_line(color = "gray80", size = 0.5), # Major grid lines
                 panel.grid.minor = element_line(color = "gray90", size = 0.25)  # Minor grid lines
@@ -339,13 +354,29 @@ plot_hw_association= function(HW_DF,
           scale_shape_manual(values = c(15, 16))+
           #scale_size_continuous(range = c(1, 8))+
           scale_color_gradient(low= "grey", high= "red", limits = c(0, 1))+
-          labs(x= "", y= "Coefficient", shape = "")
+          labs(x= "", y= "Coefficient",
+               shape = "", 
+               color = "R²")
       )
     }
   })
   
-  p1= cowplot::plot_grid(plotlist = p)
-  p1
+  # Extract legend from the first valid plot (that contains a legend)
+  legend_plot <- p[[which(sapply(p, function(plot) inherits(plot, "ggplot")))[1]]]
+  legend <- cowplot::get_legend(legend_plot)
+ 
+  # Remove legends from individual plots
+  p_no_legend <- lapply(p, remove_legend)
+  
+  # Combine plots without legends and the legend on the right
+  final_plot <- cowplot::plot_grid(
+    cowplot::plot_grid(plotlist = p_no_legend), # All plots without legends
+    legend,                                     # Single legend
+    ncol = 2,                                   # Arrange side by side
+    rel_widths = c(length(genes)*2, 0.8)                      # Adjust width ratio
+  )
+  #p1= cowplot::plot_grid(plotlist = p)
+  return(final_plot)
 }
 
 plot_transcipt_translat_corr= function(plot.df 
@@ -372,4 +403,10 @@ plot_transcipt_translat_corr= function(plot.df
     labs(alpha= "")+
     xlab("logFC - transcriptome")+
     ylab("logFC - translatome")
+}
+
+
+# Function to remove legend from individual plots
+remove_legend <- function(p) {
+  p + theme(legend.position = "none")
 }

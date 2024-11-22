@@ -4,7 +4,7 @@ server = function(input, output, session) {
 #### Query genes ####
 # to test run some function we can create a dummy input_#input= list()
 # input = list()
-# input$select_gene = c("COL1A1", "POSTN")
+ #input$select_gene = c("COL1A1", "POSTN")
   
 ## reset the gene input button:
  observeEvent(input$reset_input, {
@@ -107,17 +107,20 @@ output$gene_expression_plots = renderPlot({
   if (!is.null(input$select_gene) )  {
     fc_vec = joint_contrast_df %>% 
       filter(gene %in% input$select_gene,
-             grepl(pattern = "Mm|Rn", contrast_id))%>%
+             grepl(pattern = "mm|rn", contrast_id))%>%
       pull(logFC)
+    
+    # separate the modal time point and model vars: 
+    to_plot_df= joint_contrast_df %>% 
+      filter(grepl(pattern = "mm|rn", contrast_id))%>%
+      mutate(model= factor(ifelse(grepl("TAC", contrast_id), "TAC", 
+                                  ifelse(grepl("swim", contrast_id ),"swim", 
+                                         "PE")),levels= c("swim", "TAC", "PE")))
             
-    pls= map(input$select_gene, function(x){
-      to_plot_df= joint_contrast_df %>% 
-        filter(gene==x,
-               grepl(pattern = "Mm|Rn", contrast_id))%>%
-        mutate(model= factor(ifelse(grepl("tac", contrast_id), "tac", 
-                              ifelse(grepl("swim", contrast_id ),
-                                     "swim", 
-                                     "invitro")),levels= c("swim", "tac", "invitro")))
+    p= map(input$select_gene, function(x){
+      to_plot_df= to_plot_df %>% 
+        filter(gene==x)
+      
       #rows of plot df
       if(dim(to_plot_df)[1]<1){
           error_text2 <- paste(x , "was not captured\nin data" )
@@ -128,7 +131,9 @@ output$gene_expression_plots = renderPlot({
             )
       }else{
           return(
-            plot_logfc_gene(to_plot_df, fg_name = "model",  gene= x, 
+            plot_logfc_gene(red_contrast_df = to_plot_df, 
+                            fg_name = "model",  
+                            gene= x, 
                             max_fc = max(fc_vec), 
                             min_fc = min(fc_vec)
                             )
@@ -137,18 +142,25 @@ output$gene_expression_plots = renderPlot({
       
       
     })
-    p1= cowplot::plot_grid(plotlist =  pls)
-    p1
+    
+    p
+    
+    all_p1_plots <- lapply(p, function(x) x$p)
+    
+    # Combine plots without legends and the legend on the right
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = all_p1_plots), # All plots without legends
+      p[[1]][[2]],                                     # Single legend
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(genes)*2, 0.8)                      # Adjust width ratio
+    )
+    
+    return(final_plot)
+    
   }
 })
 
 # Mouse heart weight: 
-
-# output$heart_weight_plot= renderPlot({
-#   if (!is.null(input$select_gene) )  {
-#     plot_hw_association(HW_DF, genes = input$select_gene)
-#   }
-# })
 
 output$heart_weight_plot= renderPlot({
   if (!is.null(input$select_gene) )  {

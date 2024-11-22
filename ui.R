@@ -40,8 +40,8 @@ ui = function(request) {
                       choices = (sort(unique(joint_contrast_df$gene))), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=10, `max-options` = 6)
-                      #selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
+                                     size=10, `max-options` = 6),
+                      selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
                       ),
           
           actionButton("reset_input", "Reset genes")
@@ -58,7 +58,7 @@ ui = function(request) {
             tabPanel("A. Animal models",
                      h3("Regulation in Murine Cardiac Hypertrophy models"),
                      h4("Gene expression regulation"),
-                     plotOutput("gene_expression_plots")%>%
+                     plotOutput("gene_expression_plots", width = "100%", height = "600px")%>%
                        withSpinner(),#, width = "100%", height = "600px"),
                      p(strong("Abbreviations:")),
                      p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
@@ -79,7 +79,7 @@ ui = function(request) {
                      
                      #hw
                      h3("Phenotype associations"),
-                     h4("Explore posible associations of genetic variants with mouse phenotypes"),
+                     h4("Explore posible associations of a gene's expression with heart weight"),
                      br(),
                      p(br()),
                      plotOutput("heart_weight_plot", width = "100%", height = "400px")%>%

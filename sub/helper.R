@@ -46,7 +46,7 @@ plot_hmap= function(prog.matrix,
 ## contrast query function: 
 get_top_consistent_gene<-
   function(joint_contrast_df,
-           query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
+           query_contrasts= c("Mm_TAC_RNA_2w", "hs_HCMvsNF_snRNA_CM", "hs_fetal_RNA"), 
            alpha= 0.05, 
            cutoff= 15,
            missing_prop= 0){
@@ -181,6 +181,203 @@ get_top_consistent_gene<-
     
     
     return(list(p.hist=p.int, 
+                genes= list("i"= intersect_genes, 
+                            "u"= top_up, 
+                            "d"= top_dn),
+                df= df.full, 
+                p.top_genes= p.top_genes,
+                hmap_top= hmap_top
+    ))
+  }
+
+get_top_consistent_gene2 <-
+  function(joint_contrast_df,
+           query_contrasts= c("mm_TAC_RNA_2w", 
+                              "hs_HCMvsNF_snRNA_CM",
+                              "hs_fetal_RNA", 
+                               "hs_HCMvsNF_RNA" ), 
+           alpha= 0.05, 
+           cutoff= 10,
+           missing_prop= 1){
+    
+    #reduce df to alpha level cut off & contrast id
+    contrast_df_filt= joint_contrast_df %>% 
+      filter(contrast_id %in% query_contrasts)%>%
+      filter(FDR< alpha)
+    
+    gene_counts = contrast_df_filt %>% 
+      distinct(gene, contrast_id)%>%
+      group_by(gene)%>%
+        count()
+    
+    p.df <- gene_counts %>% 
+      ungroup()%>%
+      count(n)%>%
+      mutate(selected = ifelse(n >= missing_prop, "selected", "other"), 
+             n= factor(n, levels =  1:length(query_contrasts)))
+      
+    # if(max(p.df$n)< length(query_contrasts)){
+    #   rbind(p.df, c(length(query_contrasts), 0))
+    # }
+      
+      p.overlaps = p.df %>%
+        ggplot(aes(x = n, y= nn))+
+        geom_col(aes(fill = selected), 
+                       color = "black" # Keep the fill white to emphasize the outline
+                       ) +  # Adjust the binwidth as needed
+        scale_fill_manual(values = c("selected" = "darkred", "other" = "darkgrey")) +
+        theme_cowplot()+
+        geom_text(
+          aes(label = ifelse(selected=="selected", nn, ""), y = nn), 
+          vjust = -0.5,  # Positioning of the label above the bar
+          color = "darkred",  # Text color to match the highlighted bar
+          size = 4        # Adjust text size as needed
+          )+
+        theme(axis.line = element_blank())+
+        labs(x= "Number of contrasts", 
+             y= "Number of DEGs",
+             fill= "")
+   p.overlaps
+     ##### get the intersection genes by looking for gene with times the allowed NA
+    intersect_genes<- gene_counts %>% filter(n>= missing_prop)%>% pull(gene)%>% unique()
+
+    # assign whether genes are consistent in direction
+    df.msign= contrast_df_filt %>%
+      dplyr::select(gene, contrast_id, logFC)%>% 
+      filter(gene %in% intersect_genes) %>%
+      group_by(gene)%>% 
+      summarise(m.sign = mean(sign(logFC)))%>%
+      mutate(top_ = ifelse(m.sign== 1, "upregulated", 
+                           ifelse(m.sign ==-1 , "downregulated", "inconsistent")))
+    
+     p.bar.intersect<- df.msign %>%
+        count(top_)%>%
+        ggplot(., aes(x = 1, y =n, fill = top_)) +
+        geom_col(color="black" )+
+        geom_text(aes(label = ifelse(n >= 10, n, "")), 
+                  position = position_stack(vjust = 0.5), # Center the labels within the bars
+                  color = "white") +
+        scale_fill_manual(values = myColors)+
+        theme_cowplot()+
+        theme(axis.text.x = element_blank(), 
+              axis.line = element_blank(), 
+              axis.ticks.x = element_blank())+
+        labs(x="", y="number of genes", fill ="")
+    
+    # combine
+     p.int=  cowplot::plot_grid( p.overlaps,p.bar.intersect,
+                                 ncol = 2, labels = c("A", 
+                                                      "B"), 
+                                rel_widths = c(2,1))
+    
+    # calculate the median normalized rank across contrasts,
+    # this will serve as new ranking
+      
+    df.median= contrast_df_filt %>%
+      filter(contrast_id %in% query_contrasts,
+             gene %in% intersect_genes)%>% 
+      group_by(gene)%>%
+      summarise(m.r= mean(gene_rank_norm))
+   
+    #join back to the original data frame
+    df.full= df.median %>%
+      arrange(desc(m.r)) %>%
+      left_join(contrast_df_filt%>%
+                  dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")%>%
+      left_join(df.msign)
+    
+    if(length(intersect_genes)!= 0){
+      
+      # we prioritize those genes that are covered by all contrasts
+      
+      top_dn= df.full%>% 
+        filter(gene %in% intersect_genes)%>%
+        filter(top_== "downregulated")%>%
+        arrange(desc(m.r))%>% 
+        distinct(gene, m.r)%>%
+        pull(gene)
+      
+      top_up= df.full%>% 
+        filter(gene %in% intersect_genes)%>%
+        filter(top_== "upregulated")%>%
+        arrange((m.r))%>% 
+        distinct(gene, m.r)%>%
+        pull(gene)
+      
+      p <- lapply(list(top_up, top_dn), function(genes){
+          
+        df.full %>% 
+          filter(gene %in% c( genes[1:cutoff]))%>% 
+          mutate(gene= factor(gene, levels= c(genes)))%>%
+          ggplot(., 
+                 aes(x= gene, y= logFC))+
+          geom_boxplot(outlier.colour = NA, width = 0.4)+
+          geom_jitter(aes( color= contrast_id), width= 0.4)+
+          scale_color_manual(values= myColors_soft)+
+          theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
+          labs(x= "", color= "Contrast ID")
+        
+        
+      })
+      
+      p.top_genes = cowplot::plot_grid(plotlist = p,
+                                       ncol = 1,
+                                       labels= c("Top upregulated", 
+                                                 "Top downregulated"))
+      
+      ##add hmap
+      plot.genes= unique(c(top_dn, top_up))
+      
+      # now we select all genes that are not inconsistent
+      mat= df.full %>% 
+        dplyr::select(contrast_id, gene,  logFC, top_)%>%
+        filter(gene %in% plot.genes)%>%
+        select(-top_)%>%
+        pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
+        as.data.frame()%>%
+        #filter(!is.na(gene))%>%
+        column_to_rownames("gene")%>% 
+        as.matrix()
+        
+        # sums_per_row <-apply(mat, 1, function(row) sum(!is.na(row)))
+        # mat= mat[sums_per_row>=2 ,]
+        col_names_plot= c(top_dn[1:cutoff], top_up[1:cutoff])
+        dim(mat)
+      labeled_genes= rownames(mat)
+      labeled_genes[!labeled_genes %in% col_names_plot] <- ""
+      
+      length(labeled_genes)
+      
+      hmap_top <- ComplexHeatmap::Heatmap(t(mat),
+                                          #rect_gp = gpar(fill = "grey", lwd = 1),
+                                          name = "logFC", 
+                                          na_col = "black",
+                                          border_gp = gpar(col = "black", lty = 1),
+                                          cluster_columns = F,
+                                          cluster_rows= F, 
+                                          row_names_centered = TRUE,
+                                          show_row_dend = F, 
+                                          column_labels = labeled_genes,
+                                          column_names_gp = gpar(fontsize = 7),
+                                          row_names_side = "left",
+                                          row_dend_side = "left"
+                                          #clustering_distance_rows = "pearson",
+                                          #clustering_distance_columns = "pearson"
+                                          )
+      hmap_top
+      
+    }else{ 
+      error_text2 <- "There are no genes to be plotted.\nYou can select
+      differnt contrasts or lower the number of required contrasts." 
+      p <- ggplot()+ 
+        annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+        theme_void()
+      p.top_genes= p
+      hmap_top = p
+    }
+    
+    return(list(p.hist=p.int,
+                #p.venn= p.venn,
                 genes= list("i"= intersect_genes, 
                             "u"= top_up, 
                             "d"= top_dn),

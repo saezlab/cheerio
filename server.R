@@ -391,11 +391,15 @@ observe({
                              input$select_contrast_hs,
                              input$select_contrast_hs2
   ))
-  updateSliderInput(session, "missing_prop", max = selected_count)
+  #updateSliderInput(session, "missing_prop", max = selected_count)
+  updateSliderInput(session = session, "missing_prop",
+              max = selected_count,  # default, will be updated dynamically
+              value = selected_count
+              )
 })
 
 cont_res = eventReactive(input$submit_contrast, {
-  res= get_top_consistent_gene(joint_contrast_df = joint_contrast_df, 
+  res= get_top_consistent_gene2(joint_contrast_df = joint_contrast_df, 
                           query_contrasts = c(input$select_contrast_mm,
                                               input$select_contrast_hs,
                                               input$select_contrast_hs2),
@@ -409,6 +413,9 @@ cont_res = eventReactive(input$submit_contrast, {
 
 output$cq_hist= renderPlot({
   cont_res()$p.hist
+})
+output$cq_venn= renderPlot({
+  cont_res()$p.venn
 })
 
 output$cq_top=renderPlot({

@@ -476,7 +476,7 @@ missing_prop= 50
 
 get_top_consistent_gene<-
   function(joint_contrast_df,
-           query_contrasts= c("Mm_tac_ribo_2wk", "Hs_bulk_HCMvsNF"), 
+           query_contrasts= c("Mm_TAC_RNA_2w", "hs_HCMvsNF_snRNA_CM", "hs_fetal_RNA"), 
            alpha= 0.05, 
            cutoff= 15,
            missing_prop= 50){

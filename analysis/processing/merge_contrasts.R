@@ -201,14 +201,14 @@ joint_contrast_df %>%
          n_genes= max(gene_rank), # corresponds to the number of genes
          gene_rank_norm= gene_rank/n_genes, #  normalizes the rank to number of genes
          sig= FDR<0.05, 
-         sig= ifelse(grepl("Rn|Mm", contrast_id) & logFC<log2(1.5), FALSE, sig)) # we added this as an additional requirement for animal models to be significant
+         sig= ifelse(grepl("rn|mm", contrast_id) & logFC<log2(1.5), FALSE, sig)) # we added this as an additional requirement for animal models to be significant
 
 sort(unique(joint_contrast_df$contrast_id))
 
 ## add contrast category
 joint_contrast_df = 
   joint_contrast_df %>% 
-  mutate(cc= ifelse(grepl("Rn|Mm", contrast_id), "A", "C") ,
+  mutate(cc= ifelse(grepl("rn|mm", contrast_id), "A", "C") ,
          cc= ifelse(grepl("fetal", contrast_id), "D", cc),
          cc= ifelse(grepl("HCM", contrast_id), "B", cc))
 

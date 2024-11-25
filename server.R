@@ -3,17 +3,17 @@ server = function(input, output, session) {
   
 #### Query genes ####
 # to test run some function we can create a dummy input_#input= list()
-# input = list()
- #input$select_gene = c("COL1A1", "POSTN")
-  
+#input = list()
+#input$select_gene = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" ))
+#input$select_gene = toupper(c("GPC5", "COL4A1", "PCOLCE2", "EXT1"))
 ## reset the gene input button:
- observeEvent(input$reset_input, {
+observeEvent(input$reset_input, {
     updatePickerInput(session,
                       inputId = "select_gene", selected = character(0)
     )
   })
 
-  #input = list(select_gene =c("Nppa"))
+## A
 # cardiac mouse hypertrophy show correlation between transcript and translatome:  
 output$cardiac_hyper_corr = renderPlot({
   if (!is.null(input$select_gene) ){
@@ -77,12 +77,13 @@ output$gene_expression_plots = renderPlot({
       
       #rows of plot df
       if(dim(to_plot_df)[1]<1){
-          error_text2 <- paste(x , "was not captured\nin data" )
-          return(
-            ggplot() + 
-            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
-            theme_void()  
-            )
+        error_text2 <- paste(x , "\nwas not captured\nin data" )
+        p <- ggplot()+ 
+          annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+          theme_void()
+        return(
+          list("p"= p, "leg"= NA)
+        )
       }else{
           return(
             plot_logfc_gene(red_contrast_df = to_plot_df, 
@@ -97,16 +98,16 @@ output$gene_expression_plots = renderPlot({
       
     })
     
-    p
-    
     all_p1_plots <- lapply(p, function(x) x$p)
+    all_legends <- lapply(p, function(x) x$leg)
+    all_legends <- all_legends[!is.na(all_legends)]
     
     # Combine plots without legends and the legend on the right
     final_plot <- cowplot::plot_grid(
       cowplot::plot_grid(plotlist = all_p1_plots), # All plots without legends
-      p[[1]][[2]],                                     # Single legend
+      all_legends[[1]],                                     # Single legend
       ncol = 2,                                   # Arrange side by side
-      rel_widths = c(length(genes)*2, 0.8)                      # Adjust width ratio
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
     )
     
     return(final_plot)
@@ -115,7 +116,6 @@ output$gene_expression_plots = renderPlot({
 })
 
 # Mouse heart weight: 
-
 output$heart_weight_plot= renderPlot({
   if (!is.null(input$select_gene) )  {
     plot_hw_association(HW_DF, genes = input$select_gene)
@@ -139,6 +139,112 @@ output$IPMC_table= DT::renderDataTable({
       )
 })
 
+## B
+## human HCM bulk
+output$HFgene_regulation_magnet = renderPlot({
+  if (!is.null(input$select_gene)) {
+    
+    hcm_contrasts<- c("hs_HCMvsNF_RNA", 
+                      "hs_HCMvsDCM_RNA", 
+                      "hs_HCMrEFvsNF_prot",
+                      "hs_HCMpEFvsNF_prot",
+                      "hs_cHYPvsNF_prot"
+                      )
+    fc_vec = joint_contrast_df %>% 
+      filter(contrast_id %in% hcm_contrasts,
+             gene %in% input$select_gene)%>%
+      pull(logFC)
+    
+    p= map(input$select_gene, function(x){
+
+      to_plot_df<-joint_contrast_df %>% 
+        filter(gene== x, 
+               contrast_id %in% hcm_contrasts)
+        # mutate(contrast_id =factor(contrast_id, 
+        #                            levels=hcm_contrasts))
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "\nwas not captured\nin data" )
+        p <- ggplot()+ 
+          annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+          theme_void()
+        return(
+          list("p"= p, "leg"= NA)
+        )
+      }else{
+        
+        if(length(unique(to_plot_df$modal))==2){
+            fill_modal= c("#EF767A", "#8378b7")
+        }else{
+           fill_modal =ifelse(unique(to_plot_df$modal)=="transcriptome",
+                              "#8378b7", 
+                              "#EF767A")
+        }
+        
+        return(  
+          plot_logfc_gene(to_plot_df, 
+                          fg_name = "modal",
+                          gene= x, 
+                          max_fc= max(fc_vec),
+                          min_fc= min(fc_vec), 
+                          fills= fill_modal
+                          )
+          )
+      }
+    })
+    
+    final_plot<- plot_composite_w_one_legend(p)
+    return(final_plot)
+  }
+})
+
+## human HCM single cell
+output$HF_single = renderPlot({
+  if (!is.null(input$select_gene) ) {
+    
+    to_plot_df= joint_contrast_df%>%
+      filter(grepl("snRNA", contrast_id))%>%
+      mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
+             Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
+                                 levels= c( "HCMvsNF","HCMvsDCM")
+                                 )
+             )
+    
+    fc_vec = to_plot_df %>%
+      filter(gene %in% input$select_gene)%>% 
+      pull(logFC)
+    
+    p= map(input$select_gene, function(x){
+      to_plot_df= to_plot_df%>%
+        filter(gene==x)
+      
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "\nwas not captured\nin data" )
+        p <- ggplot()+ 
+            annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+            theme_void()
+        return(
+          list("p"= p, "leg"= NA)
+        )
+      }else{
+        return(
+          plot_logfc_gene(red_contrast_df = to_plot_df, 
+                          x_column =  "CellType", 
+                          fg_name = "Comparison", 
+                          gene= x,
+                          max_fc = max(fc_vec), 
+                          min_fc = min(fc_vec),
+                          colored_facet= F
+          )  
+        )
+      }  
+      
+    })
+    final_plot<- plot_composite_w_one_legend(p)
+    return(final_plot)
+  }
+})
+
+## C
 ## reheat (human HF): 
 output$HFgene_regulation_boxplot = renderPlot({
   if (!is.null(input$select_gene) ) {
@@ -146,7 +252,7 @@ output$HFgene_regulation_boxplot = renderPlot({
       filter(gene %in% input$select_gene)%>% 
       pull(logFC)
     
-    pls= map(input$select_gene, function(x){
+    p= map(input$select_gene, function(x){
       # prep single study df
       to_plot_df= contrasts_HF %>% 
         filter(gene== (x))%>%
@@ -168,8 +274,8 @@ output$HFgene_regulation_boxplot = renderPlot({
         )
       }
     })
-    p1= cowplot::plot_grid(plotlist =  pls)
-    p1
+    final_plot<- plot_composite_w_one_legend(p)
+    return(final_plot)
   }
 })
 
@@ -220,82 +326,7 @@ output$mean_t_dist = renderPlotly({
   }
 })
 
-## human HCM single cell
-output$HF_single = renderPlot({
-  if (!is.null(input$select_gene) ) {
-    fc_vec = joint_contrast_df %>% 
-      filter(grepl("singlecell", contrast_id), 
-             !grepl("DCMvsNF", contrast_id),
-             gene %in% input$select_gene)%>%
-      pull(logFC)
-      
-    pls= map(input$select_gene, function(x){
-      to_plot_df= joint_contrast_df%>%
-        filter(grepl("singlecell", contrast_id), 
-               !grepl("DCMvsNF", contrast_id))%>%
-        mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
-               Comparison = factor(str_extract(contrast_id, "(?<=_)[^_]+(?=_[^_]+$)"),
-                                   levels= c( "HCMvsNF","HCMvsDCM")
-                                   ))%>%
-        filter(gene==x)
-      
-      if(dim(to_plot_df)[1]<1){
-        error_text2 <- paste(x , "was not captured\nin data" )
-        return(
-          ggplot() + 
-            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
-            theme_void()   
-        )
-      }else{
-        return(
-          plot_logfc_gene(to_plot_df, x= "CellType", fg_name = "Comparison",  gene= x,
-                          max_fc = max(fc_vec), 
-                          min_fc = min(fc_vec)
-                          )  
-        )
-        }  
-        
-    })
-    p1= cowplot::plot_grid(plotlist =  pls)
-    p1
-    
-  }
-})
 
-## human HCM bulk
-output$HFgene_regulation_magnet = renderPlot({
-  if (!is.null(input$select_gene)) {
-    
-    fc_vec = joint_contrast_df %>% 
-      filter(grepl("bulk", contrast_id), 
-             !grepl("DCMvsNF", contrast_id),
-             gene %in% input$select_gene)%>%
-    pull(logFC)
-    
-  pls= map(input$select_gene, function(x){
-    to_plot_df<-joint_contrast_df %>% 
-      filter(gene== x, 
-             grepl("bulk", contrast_id ), 
-             !grepl("DCMvsNF", contrast_id))
-      if(dim(to_plot_df)[1]<1){
-        error_text2 <- paste(x , "was not captured\nin data" )
-        return(
-          ggplot() + 
-            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
-            theme_void()   
-        )
-      }else{
-        return(
-          plot_logfc_gene(to_plot_df, gene= x, 
-                          max_fc= max(fc_vec),
-                          min_fc= min(fc_vec))
-        )
-      }
-    })
-  p1= cowplot::plot_grid(plotlist =  pls)
-  p1
-  }
-})
 
 ## fetal gene expression :
 output$fetal_gene_expression_plots = renderPlot({
@@ -306,7 +337,7 @@ output$fetal_gene_expression_plots = renderPlot({
              gene %in% input$select_gene)%>%
       pull(logFC)
     
-    pls= map(input$select_gene, function(x){
+    p= map(input$select_gene, function(x){
       to_plot_df<- joint_contrast_df %>% 
         filter(gene==x, 
                grepl("fetal", contrast_id ))
@@ -320,15 +351,16 @@ output$fetal_gene_expression_plots = renderPlot({
           )
         }else{
           return(
-            plot_logfc_gene(joint_contrast_df = to_plot_df,  gene= x,
-                          max_fc = max(fc_vec), 
-                          min_fc = min(fc_vec))
+            plot_logfc_gene(red_contrast_df = to_plot_df,  
+                            gene= x,
+                            max_fc = max(fc_vec), 
+                            min_fc = min(fc_vec))
         )
       }
         
     })
-    p1= cowplot::plot_grid(plotlist =  pls)
-    p1
+    final_plot<- plot_composite_w_one_legend(p)
+    return(final_plot)
   }
 })
 

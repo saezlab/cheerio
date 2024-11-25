@@ -68,7 +68,7 @@ df_tf= readRDS("app_data/dorothea_results_all.rds")
 
 #contrast query:
 #joint_contrast_df= readRDS( "app_data/contrasts_query_df.rds")
-joint_contrast_df= readRDS( "data/contrasts_query_df_translated3.rds")
+joint_contrast_df= readRDS( "app_data/contrasts_query_df_translated3.rds")
 
 TFs= sapply(df_tf, function(x){
   unique(toupper(x$source))

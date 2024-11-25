@@ -207,7 +207,9 @@ plot_logfc_gene = function(red_contrast_df,
                            fg_name= NULL, 
                            max_fc, 
                            min_fc,
-                           gene){
+                           gene,
+                           colored_facet =T,
+                           ...){
   if(min_fc>0){min_fc= 0}
   if(max_fc<0){max_fc= 0}
   
@@ -237,23 +239,17 @@ plot_logfc_gene = function(red_contrast_df,
   p1 <- remove_legend(p1)
 
   if(!is.null(fg_name)){
-    p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")
     
-    p1 = make_colorful_facet_labels(p1)
+    # Set facet levels if facet_levels are provided
+   
+    p1= p1+facet_grid(rows= vars(!!rlang::ensym(fg_name)), scales = "free")
+    if(colored_facet){
+      p1 = make_colorful_facet_labels(p1, ...)
+    }
     p1
-    # g <- ggplot_gtable(ggplot_build(p1))
-    # stripr <- which(grepl('strip-r', g$layout$name))
-    # fills <- c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
-    # k <- 1
-    # for (i in stripr) {
-    #   j <- which(grepl('rect', g$grobs[[i]]$grobs[[1]]$childrenOrder))
-    #   g$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-    #   k <- k+1
-    # }
-    # #grid.draw(g)
-    # #p1 <- ggplotify::as.ggplot(~grid.draw(g))
-    # p1<- ggpubr::as_ggplot(g)
+
   }
+  
   return(list("p"= p1, "leg"= legend))
 }
 
@@ -276,6 +272,21 @@ make_colorful_facet_labels <- function(p1,
   return(p1)
 }
 
+plot_composite_w_one_legend = function(p){
+  all_p1_plots <- lapply(p, function(x) x$p)
+  all_legends <- lapply(p, function(x) x$leg)
+  all_legends <- all_legends[!is.na(all_legends)]
+  
+  # Combine plots without legends and the legend on the right
+  final_plot <- cowplot::plot_grid(
+    cowplot::plot_grid(plotlist = all_p1_plots), # All plots without legends
+    all_legends[[1]],                                     # Single legend
+    ncol = 2,                                   # Arrange side by side
+    rel_widths = c(length(input$select_gene)*2, 2)         # Adjust width ratio
+  )
+  
+  return(final_plot)
+}
 
 ## this function plots a linear model with response variable 
 ## heart weight. Requires gex data frame
@@ -431,7 +442,7 @@ plot_transcipt_translat_corr= function(to_plot_df){
           panel.grid.minor = element_blank(),
           axis.text = element_text(size= 11), 
           axis.title = element_text(size= 10)) +
-    labs(alpha= "")+
+    labs(alpha= "", color ="Genes")+
     xlab("logFC - transcriptome")+
     ylab("logFC - translatome")+
     guides(color = guide_legend(override.aes = list(size = 5))) 

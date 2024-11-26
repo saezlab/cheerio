@@ -205,14 +205,14 @@ tabPanel(
                 ),
     
     sliderInput("cut_off_genes", "3. Select number of genes to plot:",
-                min = 1, max = 40,
+                min = 1, max = 70,
                 value = 10, step= 1),
     hr(),
     sliderInput("missing_prop", "4. Select minimum number of contrasts to report a gene",
                 min = 1, max = 10,
                 value = 1, step= 1),
     br(), 
-    strong("4. Compare contrasts!"), 
+    strong("5. Compare contrasts!"), 
     br(), 
     actionButton("submit_contrast", label="Submit",
                  icon=icon("paper-plane")) 
@@ -239,21 +239,7 @@ tabPanel(
     hr(),
     br(),
     br(),
-    
-    h4("Table of consistently dysregulated gene(s)"),
-    tabsetPanel(
-      type = "tabs",
-      tabPanel("Upregulated",
-               DT::dataTableOutput("cq_table_up")),
-      tabPanel("Downregulated",
-               DT::dataTableOutput("cq_table_dn")),
-      tabPanel("all", DT::dataTableOutput("cq_table_full"))
-      )%>%withSpinner(),
-    hr(),  
-    br(),
-    br(),
-    
-    h3("Characterize conistent genes"),
+    h3("Characterize the shared gene signature"),
     br(),
     h5("You can now explore functional annotations of the up or downregulated genes!"),
     p("1. Click one of the buttons to copy genes into your clipboard."),
@@ -267,16 +253,27 @@ tabPanel(
     HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab-funki-analysis-rnfy3j.streamlit.app/'> FUNKi </a> 
         from the <a href=' https://saezlab.org'> Saezlab </a and paste the genes into the gene submission field. 
         </p> "),
-    HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr </a> 
-        from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
+    HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/Enrichr/'> Enrichr </a> 
+        or <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr-KG </a> from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
         </p> "),
-    HTML("<p> 2c. To explore possible gene network based drug interactions, tissue expression and related disorders go to <a href='https://drugst.one/standalone'> Drugst.one </a> f
-      from th the <a href='https://www.cosy.bio/'> Baumbachlab </a> and paste the genes into the network input field.
-        </p> "),
-    p("3. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
+    uiOutput("drugst_one_link"),
+    p("4. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
+    hr(),  
     br(),
     br(),
-    hr()
+    h4("Explore the signature in table form"),
+    tabsetPanel(
+      type = "tabs",
+      tabPanel("Upregulated",
+               DT::dataTableOutput("cq_table_up")),
+      tabPanel("Downregulated",
+               DT::dataTableOutput("cq_table_dn")),
+      tabPanel("all", DT::dataTableOutput("cq_table_full"))
+    )%>%withSpinner(),
+    hr(),  
+    br(),
+    br(),
+    
      
   )
 ),

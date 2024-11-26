@@ -44,161 +44,17 @@ plot_hmap= function(prog.matrix,
 
 
 ## contrast query function: 
-get_top_consistent_gene<-
-  function(joint_contrast_df,
-           query_contrasts= c("Mm_TAC_RNA_2w", "hs_HCMvsNF_snRNA_CM", "hs_fetal_RNA"), 
-           alpha= 0.05, 
-           cutoff= 15,
-           missing_prop= 0){
-    
-    
-    contrast_df_filt= joint_contrast_df %>% 
-      filter(contrast_id %in% query_contrasts)%>%
-      filter(FDR< alpha)
-    
-    # get overview of intersect
-    venns= table(contrast_df_filt$gene)
-    
-    x= split(contrast_df_filt$gene, contrast_df_filt$contrast_id)
-    x= lapply(x, unique)
-    
-    p.venn= plot(euler(x, shape = "ellipse"), quantities = TRUE)
-    
-    intersect_genes= names(venns[venns >= (length(query_contrasts)*missing_prop/100)])
-    
-    df.msign= contrast_df_filt %>%
-      dplyr::select(gene, contrast_id, logFC)%>% 
-      filter(gene %in% intersect_genes) %>%
-      group_by(gene)%>% 
-      summarise(m.sign = mean(sign(logFC)))%>%
-      mutate(top_ = ifelse(m.sign== 1, "upregulated", 
-                           ifelse(m.sign ==-1 , "downregulated", "inconsistent")))
-      
-    top_up = df.msign %>%
-      filter(top_== "upregulated")%>% pull(gene)
-    
-    top_dn = df.msign %>%
-      filter(top_== "downregulated")%>% pull(gene)
-    
-    p.bar.intersect=
-      ggplot(df.msign, aes(x= factor(top_, levels = c("upregulated", 
-                                                    "downregulated", 
-                                                    "inconsistent"))))+
-      geom_bar()+
-      labs(x= "consistency of regulation")+
-      theme(axis.text.x = element_text(angle= 60, hjust= 1))
-    
-    p.int=  cowplot::plot_grid( p.venn,p.bar.intersect,
-                               ncol = 2, labels = c("A", 
-                                                   "B"), 
-                               rel_widths = c(1,0.3))
-    
-    # calculate the median normalized rank across contrasts
-      df.median= joint_contrast_df %>%
-        filter(contrast_id %in% query_contrasts,
-               gene %in% intersect_genes)%>% 
-        group_by(gene)%>%
-        summarise(m.r= mean(ranks3))
-      
-      df.full= df.median %>%
-        arrange(desc(m.r)) %>%
-        left_join(contrast_df_filt%>%
-                    dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")
-      
-    if(length(intersect_genes)!= 0){
-      top_dn2= df.median%>% filter(gene %in% top_dn) %>% arrange(desc(m.r))%>% slice(1:cutoff)%>% pull(gene)
-      top_up2= df.median%>% filter(gene %in% top_up) %>% arrange(m.r)%>% slice(1:cutoff)%>% pull(gene)
-      
-      p.top_gene_up=
-        df.full %>% 
-          filter(gene %in% c( top_up2))%>% 
-          mutate(gene= factor(gene, levels= c(top_up2)))%>%
-            ggplot(., 
-                   aes(x= gene, y= logFC))+
-            geom_boxplot(outlier.colour = NA)+
-            geom_jitter(aes( color= contrast_id))+
-            theme(axis.text.x = element_text(angle= 60 , hjust= 1))
-            #geom_hline(yintercept = 0)
-            
-        p.top_gene_dn=
-              df.full %>% 
-              filter(gene %in% c(top_dn2 ))%>% 
-              mutate(gene= factor(gene, levels= c(top_dn2 )))%>%
-            ggplot(., 
-                   aes(x= gene, y= logFC))+
-              geom_boxplot(outlier.colour = NA)+
-              geom_jitter(aes( color= contrast_id))+
-              theme(axis.text.x = element_text(angle= 60 , hjust= 1))
-              #geom_hline(yintercept = 0)      
-            
-      p.top_genes = cowplot::plot_grid(p.top_gene_up, p.top_gene_dn, 
-                                       ncol = 1,
-                                       labels= c("top upregulated", 
-                                                 "top downregulated"))
-      
-      ##add hmap
-      plot.genes= unique(c(top_dn, top_up))
-     
-      mat= joint_contrast_df %>% 
-        dplyr::select(contrast_id, gene,  logFC)%>%
-        filter(gene %in% plot.genes,
-               contrast_id %in% query_contrasts)%>%
-        pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
-        as.data.frame()%>%
-        filter(!is.na(gene))%>%
-        column_to_rownames("gene")
-      col_names_plot= c(top_dn2, top_up2)
-      
-      na_sums_per_row <- apply(mat, 1, function(row) sum(is.na(row)))
-      mat_subset= mat[na_sums_per_row < 0.5 *  ncol(mat),]
-      
-      x= rownames(mat_subset)
-      x[!x %in% col_names_plot] <- ""
-    
-      hmap_top <- ComplexHeatmap::Heatmap(t(mat_subset),
-                                          #rect_gp = gpar(fill = "grey", lwd = 1),
-                                          name = "logFC", 
-                                          na_col = "black",
-                                          border_gp = gpar(col = "black", lty = 1),
-                                          cluster_columns = T,
-                                          cluster_rows= T, 
-                                          
-                                          column_labels = x,
-                                          column_names_gp = gpar(fontsize = 9),
-                                          row_names_side = "left",
-                                          row_dend_side = "left"
-                                          
-      )
-        
-    }else{ 
-      p.top_genes= NULL
-      hmap_top <- NULL
-    }
-    
-    ## add hmap= 
-    
-    
-    
-    
-    return(list(p.hist=p.int, 
-                genes= list("i"= intersect_genes, 
-                            "u"= top_up, 
-                            "d"= top_dn),
-                df= df.full, 
-                p.top_genes= p.top_genes,
-                hmap_top= hmap_top
-    ))
-  }
 
 get_top_consistent_gene2 <-
   function(joint_contrast_df,
            query_contrasts= c("mm_TAC_RNA_2w", 
                               "hs_HCMvsNF_snRNA_CM",
                               "hs_fetal_RNA", 
-                               "hs_HCMvsNF_RNA" ), 
+                               "hs_HCMvsNF_RNA",
+                              "hs_HCMvsNF_snRNA_Neu"), 
            alpha= 0.05, 
            cutoff= 10,
-           missing_prop= 1){
+           missing_prop= 5){
     
     #reduce df to alpha level cut off & contrast id
     contrast_df_filt= joint_contrast_df %>% 
@@ -225,7 +81,7 @@ get_top_consistent_gene2 <-
         geom_col(aes(fill = selected), 
                        color = "black" # Keep the fill white to emphasize the outline
                        ) +  # Adjust the binwidth as needed
-        scale_fill_manual(values = c("selected" = "darkred", "other" = "darkgrey")) +
+        scale_fill_manual(values = c("selected" = "#4D7298", "other" = "darkgrey")) +
         theme_cowplot()+
         geom_text(
           aes(label = ifelse(selected=="selected", nn, ""), y = nn), 
@@ -237,7 +93,7 @@ get_top_consistent_gene2 <-
         labs(x= "Number of contrasts", 
              y= "Number of DEGs",
              fill= "")
-   p.overlaps
+   
      ##### get the intersection genes by looking for gene with times the allowed NA
     intersect_genes<- gene_counts %>% filter(n>= missing_prop)%>% pull(gene)%>% unique()
 
@@ -247,8 +103,15 @@ get_top_consistent_gene2 <-
       filter(gene %in% intersect_genes) %>%
       group_by(gene)%>% 
       summarise(m.sign = mean(sign(logFC)))%>%
-      mutate(top_ = ifelse(m.sign== 1, "upregulated", 
-                           ifelse(m.sign ==-1 , "downregulated", "inconsistent")))
+      mutate(top_ = factor(ifelse(m.sign== 1, 
+                                  "upregulated", 
+                                  ifelse(m.sign ==-1 ,
+                                         "downregulated", 
+                                         "inconsistent")
+                                  ),
+                           levels= c("upregulated", "inconsistent", "downregulated")
+                           )
+             )
     
      p.bar.intersect<- df.msign %>%
         count(top_)%>%
@@ -257,7 +120,7 @@ get_top_consistent_gene2 <-
         geom_text(aes(label = ifelse(n >= 10, n, "")), 
                   position = position_stack(vjust = 0.5), # Center the labels within the bars
                   color = "white") +
-        scale_fill_manual(values = myColors)+
+        scale_fill_manual(values = rev(c("darkblue", "darkgrey", "darkred")))+
         theme_cowplot()+
         theme(axis.text.x = element_blank(), 
               axis.line = element_blank(), 
@@ -265,10 +128,10 @@ get_top_consistent_gene2 <-
         labs(x="", y="number of genes", fill ="")
     
     # combine
-     p.int=  cowplot::plot_grid( p.overlaps,p.bar.intersect,
+    p.int=  cowplot::plot_grid( p.overlaps,p.bar.intersect,
                                  ncol = 2, labels = c("A", 
                                                       "B"), 
-                                rel_widths = c(2,1))
+                                rel_widths = c(2,1.2))
     
     # calculate the median normalized rank across contrasts,
     # this will serve as new ranking
@@ -306,24 +169,60 @@ get_top_consistent_gene2 <-
       
       p <- lapply(list(top_up, top_dn), function(genes){
           
-        df.full %>% 
+        df.sub<- df.full %>% 
           filter(gene %in% c( genes[1:cutoff]))%>% 
-          mutate(gene= factor(gene, levels= c(genes)))%>%
+          mutate(gene= factor(gene, levels= c(genes)))
+        if(mean(df.sub$logFC)>0){
+          ylims= c(0,max(df.sub$logFC)+0.2)
+        }else{
+          ylims= c(min(df.sub$logFC)-0.2, 0)
+        }
+        df.sub%>%
           ggplot(., 
                  aes(x= gene, y= logFC))+
           geom_boxplot(outlier.colour = NA, width = 0.4)+
-          geom_jitter(aes( color= contrast_id), width= 0.4)+
+          geom_jitter(aes( color= contrast_id), width= 0.2)+
           scale_color_manual(values= myColors_soft)+
           theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
-          labs(x= "", color= "Contrast ID")
-        
-        
+          labs(x= "", color= "Contrast ID")+
+          geom_hline(yintercept = 0, color="darkgrey")+
+          ylim(ylims)
+          #ylim(0, max(abs(df.sub$logFC))*sign(mean(df.sub$logFC)))
+        # Create the interactive plot with plotly
+        # Create the interactive plot with plotly
+        # df.sub %>%
+        #   plot_ly() %>% 
+        #   add_trace(x = ~as.numeric(gene),y = ~logFC, type = "box", 
+        #             hoverinfo = 'name+y', color="black") %>%
+        #   add_markers(x = ~jitter(as.numeric(gene)), y = ~logFC, color = ~contrast_id,
+        #               marker = list(size = 10),
+        #               hoverinfo = "text",
+        #               text = ~paste0("Group: ",contrast_id,
+        #                              "<br>xval: ",logFC),
+        #               showlegend = FALSE) %>% 
+        #   layout(
+        #     xaxis = list(title = "", 
+        #                  showticklabels = TRUE),
+        #     yaxis = list(range = ylims),
+        #     title = ifelse(mean(df.sub$logFC) > 0, 
+        #                    "A",
+        #                    "B"),
+        #     
+        #     legend = list(title = list(text = "Contrast ID"))
+        #   )
+          
       })
+      #p1 <- subplot(p[[1]], p[[2]], nrows = 2, titleX = TRUE, titleY = TRUE)
       
-      p.top_genes = cowplot::plot_grid(plotlist = p,
+      # Show the final interactive plot
+      #p1
+      legend_p<- get_legend(p[[1]])
+      p.top_genes = plot_grid(cowplot::plot_grid(remove_legend(p[[1]]), 
+                                       remove_legend(p[[2]]),
                                        ncol = 1,
-                                       labels= c("Top upregulated", 
-                                                 "Top downregulated"))
+                                       labels= c("A", 
+                                                 "B")),
+                              legend_p, nrow= 1, rel_widths= c(1,0.2))
       
       ##add hmap
       plot.genes= unique(c(top_dn, top_up))
@@ -366,6 +265,12 @@ get_top_consistent_gene2 <-
                                           )
       hmap_top
       
+      gene_list= list("i"= intersect_genes, 
+                  "u"= top_up, 
+                  "d"= top_dn)
+      
+      drugst_URL= generate_drugstone_url(c(top_dn[1:cutoff], top_up[1:cutoff]))
+      
     }else{ 
       error_text2 <- "There are no genes to be plotted.\nYou can select
       differnt contrasts or lower the number of required contrasts." 
@@ -374,16 +279,17 @@ get_top_consistent_gene2 <-
         theme_void()
       p.top_genes= p
       hmap_top = p
+      gene_list= list()
+      drugst_URL=NULL
     }
     
     return(list(p.hist=p.int,
                 #p.venn= p.venn,
-                genes= list("i"= intersect_genes, 
-                            "u"= top_up, 
-                            "d"= top_dn),
+                genes= gene_list,
                 df= df.full, 
                 p.top_genes= p.top_genes,
-                hmap_top= hmap_top
+                hmap_top= hmap_top,
+                drugst_URL=drugst_URL
     ))
   }
 
@@ -432,7 +338,7 @@ plot_logfc_gene = function(red_contrast_df,
     ggtitle(gene)+
     ylim(c(min_fc, max_fc))
   
-  legend <- cowplot::get_legend(p1)
+  #legend <- cowplot::get_legend(p1)
   p1 <- remove_legend(p1)
 
   if(!is.null(fg_name)){
@@ -447,8 +353,13 @@ plot_logfc_gene = function(red_contrast_df,
 
   }
   
-  return(list("p"= p1, "leg"= legend))
+  return(p1)
 }
+
+# all_p1_plots <- lapply(p, function(x) x$p)
+# all_legends <- lapply(p, function(x) x$leg)
+# all_legends <- all_legends[!is.na(all_legends)]
+# saveRDS(all_legends[[1]], "app_data/legend_for_lfc_plot.rds")
 
 make_colorful_facet_labels <- function(p1,
                                         fills = c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
@@ -469,80 +380,6 @@ make_colorful_facet_labels <- function(p1,
   return(p1)
 }
 
-plot_composite_w_one_legend = function(p){
-  all_p1_plots <- lapply(p, function(x) x$p)
-  all_legends <- lapply(p, function(x) x$leg)
-  all_legends <- all_legends[!is.na(all_legends)]
-  
-  # Combine plots without legends and the legend on the right
-  final_plot <- cowplot::plot_grid(
-    cowplot::plot_grid(plotlist = all_p1_plots), # All plots without legends
-    all_legends[[1]],                                     # Single legend
-    ncol = 2,                                   # Arrange side by side
-    rel_widths = c(length(input$select_gene)*2, 2)         # Adjust width ratio
-  )
-  
-  return(final_plot)
-}
-
-## this function plots a linear model with response variable 
-## heart weight. Requires gex data frame
-plot_hw_association_lm= function(HW_DF, 
-                              genes,
-                              my.formula = y~x){
-  p= map(genes , function(x){
-    #map(c("rna", "ribo"), function(y){
-    to_plot_df<- HW_DF %>%
-      filter(gene == x )
-    
-    if(dim(to_plot_df)[1]<1){
-      error_text2 <- paste(x , "was not captured\nin data" )
-      return(
-        ggplot() + 
-          annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
-          theme_void()   
-      )
-    }else{
-      return(
-      to_plot_df%>%
-        mutate(exp.group =ifelse(grepl("ct", exp.group), "ct", exp.group))%>%
-        ggplot(., aes(x= HW_BW, y= exp, color= model))+
-        geom_point(aes(shape= exp.group), size = 3, alpha= 0.6)+
-        facet_grid(rows= vars(modal), scales="free_y")+
-        stat_smooth(fullrange = T, method = "lm", formula = my.formula, se = F, linewidth= 0.4) +
-        # stat_poly_eq(aes(label = paste(after_stat(rr.label))), 
-        #              label.x = "left", label.y = "top",
-        #              formula = my.formula, parse = TRUE, size = 4)+
-        stat_fit_glance(method = 'lm',
-                        method.args = list(formula =my.formula),
-                        geom = 'label_repel', 
-                        aes(label = paste("P-val= ", 
-                                          signif(..p.value.., digits = 1), sep = "")),
-                        label.x = 'right',
-                        label.y = "top",
-                        size = 4,
-                        alpha= 0.7)+
-        ggtitle(x)+
-        scale_color_manual(values = c("swim" = "darkblue",
-                                      "tac"="darkred", 
-                                      drop= FALSE))+
-        labs(y= "Normalized gene expression",
-             x= "Normalized heart weight", 
-             shape= "Experimental\ngroup")+
-        theme(panel.grid.major = element_line(color = "grey",
-                                              linewidth = 0.1,
-                                              linetype = 1),
-              panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
-              panel.grid.minor = element_blank(),
-              axis.text = element_text(size= 11), 
-              axis.title = element_text(size= 10)) 
-        )
-    }
-  })
-  
-  p1= cowplot::plot_grid(plotlist = p)
-  p1
-}
 
 ## this function plots results of a precalculated linear model
 ## with response variable heart weight. 
@@ -650,4 +487,23 @@ plot_transcipt_translat_corr= function(to_plot_df){
 # Function to remove legend from individual plots
 remove_legend <- function(p) {
   p + theme(legend.position = "none")
+}
+
+generate_drugstone_url <- function(node_vec, identifier = "symbol", autofill_edges = FALSE, 
+                                   interaction_ppi = "STRING", interaction_dpi = "DrugBank") {
+  # Convert the node vector to a comma-separated string
+  nodes <- paste(node_vec, collapse = ",")
+  
+  # Convert boolean options to lowercase strings
+  autofill_edges_str <- tolower(as.character(autofill_edges))
+  
+  # Construct the base URL with parameters
+  url <- paste0("https://drugst.one?",
+                "nodes=", nodes,
+                "&identifier=", identifier,
+                "&autofillEdges=", autofill_edges_str,
+                "&interactionProteinProtein=", interaction_ppi,
+                "&interactionDrugProtein=", interaction_dpi)
+  
+  return(url)
 }

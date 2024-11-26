@@ -85,7 +85,7 @@ HW_DF= readRDS("app_data/heart_weight_precalc.rds")
 
 
 # app stuff ---------------------------------------------------------------
-
+legend_lfc_plot= readRDS("app_data/legend_for_lfc_plot.rds")
 error_text = "Queried gene(s) were not captured\nin data"
 
 

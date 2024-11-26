@@ -98,14 +98,11 @@ output$gene_expression_plots = renderPlot({
       
     })
     
-    all_p1_plots <- lapply(p, function(x) x$p)
-    all_legends <- lapply(p, function(x) x$leg)
-    all_legends <- all_legends[!is.na(all_legends)]
-    
+  
     # Combine plots without legends and the legend on the right
     final_plot <- cowplot::plot_grid(
-      cowplot::plot_grid(plotlist = all_p1_plots), # All plots without legends
-      all_legends[[1]],                                     # Single legend
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
       ncol = 2,                                   # Arrange side by side
       rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
     )
@@ -192,7 +189,12 @@ output$HFgene_regulation_magnet = renderPlot({
       }
     })
     
-    final_plot<- plot_composite_w_one_legend(p)
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+    )
     return(final_plot)
   }
 })
@@ -239,7 +241,14 @@ output$HF_single = renderPlot({
       }  
       
     })
-    final_plot<- plot_composite_w_one_legend(p)
+    
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+    )
+    
     return(final_plot)
   }
 })
@@ -274,7 +283,14 @@ output$HFgene_regulation_boxplot = renderPlot({
         )
       }
     })
-    final_plot<- plot_composite_w_one_legend(p)
+    
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+    )
+    
     return(final_plot)
   }
 })
@@ -359,7 +375,14 @@ output$fetal_gene_expression_plots = renderPlot({
       }
         
     })
-    final_plot<- plot_composite_w_one_legend(p)
+    
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+    )
+    
     return(final_plot)
   }
 })
@@ -501,6 +524,23 @@ output$clipdn <- renderUI({
     #clipText = enframe(cont_res()$genes$u),
     icon = icon("clipboard")
   )
+})
+
+output$drugst_one_link <- renderUI({
+  # Access the reactive result
+  res <- cont_res()
+  
+  # Check if res$drugURL exists and is not NULL
+  if (!is.null(res$drugst_URL)) {
+    HTML(paste0(
+      "<p> 3. To explore possible gene network based drug interactions, tissue expression and related disorders go to ",
+      "<a href='", res$drugst_URL, "' target='_blank'> Drugst.one </a> ",
+      "from the <a href='https://www.cosy.bio/' target='_blank'> Baumbachlab </a> ",
+      "and explore a knowlege graph around the signature.</p>"
+    ))
+  } else {
+    HTML("<p>No URL available. Please select contrasts and try again.</p>")
+  }
 })
 
 

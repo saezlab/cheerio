@@ -141,12 +141,7 @@ output$IPMC_table= DT::renderDataTable({
 output$HFgene_regulation_magnet = renderPlot({
   if (!is.null(input$select_gene)) {
     
-    hcm_contrasts<- c("hs_HCMvsNF_RNA", 
-                      "hs_HCMvsDCM_RNA", 
-                      "hs_HCMrEFvsNF_prot",
-                      "hs_HCMpEFvsNF_prot",
-                      "hs_cHYPvsNF_prot"
-                      )
+   
     fc_vec = joint_contrast_df %>% 
       filter(contrast_id %in% hcm_contrasts,
              gene %in% input$select_gene)%>%
@@ -201,56 +196,62 @@ output$HFgene_regulation_magnet = renderPlot({
 
 ## human HCM single cell
 output$HF_single = renderPlot({
-  if (!is.null(input$select_gene) ) {
-    
-    to_plot_df= joint_contrast_df%>%
-      filter(grepl("snRNA", contrast_id))%>%
-      mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
-             Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
-                                 levels= c( "HCMvsNF","HCMvsDCM")
-                                 )
-             )
-    
-    fc_vec = to_plot_df %>%
-      filter(gene %in% input$select_gene)%>% 
-      pull(logFC)
-    
-    p= map(input$select_gene, function(x){
-      to_plot_df= to_plot_df%>%
-        filter(gene==x)
-      
-      if(dim(to_plot_df)[1]<1){
-        error_text2 <- paste(x , "\nwas not captured\nin data" )
-        p <- ggplot()+ 
-            annotate("text", x = 4, y = 25, size=6, label = error_text2)+
-            theme_void()
-        return(
-          list("p"= p, "leg"= NA)
-        )
-      }else{
-        return(
-          plot_logfc_gene(red_contrast_df = to_plot_df, 
-                          x_column =  "CellType", 
-                          fg_name = "Comparison", 
-                          gene= x,
-                          max_fc = max(fc_vec), 
-                          min_fc = min(fc_vec),
-                          colored_facet= F
-          )  
-        )
-      }  
-      
-    })
-    
-    final_plot <- cowplot::plot_grid(
-      cowplot::plot_grid(plotlist = p), # All plots without legends
-      legend_lfc_plot,                 # Single legend is loaded in global.R
-      ncol = 2,                                   # Arrange side by side
-      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
-    )
-    
-    return(final_plot)
-  }
+  sn_contrasts <- df_func%>%
+         filter(grepl("snRNA", condition))%>%
+    pull(condition)%>% unique()
+  
+  get_tf_plot(sn_contrasts, fg_name= "model", colored_facet = T)
+  
+  # if (!is.null(input$select_gene) ) {
+  #   
+  #   to_plot_df= joint_contrast_df%>%
+  #     filter(grepl("snRNA", contrast_id))%>%
+  #     mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
+  #            Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
+  #                                levels= c( "HCMvsNF","HCMvsDCM")
+  #                                )
+  #            )
+  #   
+  #   fc_vec = to_plot_df %>%
+  #     filter(gene %in% input$select_gene)%>% 
+  #     pull(logFC)
+  #   
+  #   p= map(input$select_gene, function(x){
+  #     to_plot_df= to_plot_df%>%
+  #       filter(gene==x)
+  #     
+  #     if(dim(to_plot_df)[1]<1){
+  #       error_text2 <- paste(x , "\nwas not captured\nin data" )
+  #       p <- ggplot()+ 
+  #           annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+  #           theme_void()
+  #       return(
+  #         list("p"= p, "leg"= NA)
+  #       )
+  #     }else{
+  #       return(
+  #         plot_logfc_gene(red_contrast_df = to_plot_df, 
+  #                         x_column =  "CellType", 
+  #                         fg_name = "Comparison", 
+  #                         gene= x,
+  #                         max_fc = max(fc_vec), 
+  #                         min_fc = min(fc_vec),
+  #                         colored_facet= F
+  #         )  
+  #       )
+  #     }  
+  #     
+  #   })
+  #   
+  #   final_plot <- cowplot::plot_grid(
+  #     cowplot::plot_grid(plotlist = p), # All plots without legends
+  #     legend_lfc_plot,                 # Single legend is loaded in global.R
+  #     ncol = 2,                                   # Arrange side by side
+  #     rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+  #   )
+  #   
+  #   return(final_plot)
+  # }
 })
 
 ## C
@@ -551,50 +552,80 @@ observeEvent(input$reset_input_TF, {
                     inputId = "select_tf", selected = character(0)
   )
 })
+# input= list()
+# input$select_tf = c("TRP73", "ZEB2", "AHR", "APEX1")
 
 # ## A. Animal
 output$funcA_tf= renderPlot({
-  pls= map(input$select_tf, function(x){
-    plot_df = df_tf$mm%>%
-      filter(source ==str_to_title(x))%>%
-      mutate(condition= paste(tp, modality,sep =  "_"),
-             condition= ifelse(tp=="", paste0("Rn", condition),paste0("Mm_", condition) ))
-    
-    plot_df%>%plot_logfc_gene(., "condition", y= "score", gene = x, fg_name = "model")+
-      labs(x = "experimental group", y = "", fill = "p<0.05") 
+  if (!is.null(input$select_tf) ){
+    A_contrasts<- df_func %>% 
+      filter(grepl(pattern = "mm|rn", condition))%>%
+      pull(condition)%>% unique()
+  
+    p<- get_tf_plot(contrast_ids = A_contrasts,
+                  tfs= input$select_tf,
+              fg_name = "model",
+              colored_facet=T) 
+    return(p)       
+  }
+ })
+
+# output$funcA_pw= renderPlot({
+#   df_func%>% filter(database=="progeny")
+#   p1 =(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo)+plot_hmap(prog.res$rn))
+#   p1
+# })
+
+output$func_tb_pw_mm=DT::renderDataTable({
+  df_func%>%
+    filter(database=="progeny", !grepl("hs", condition))%>%
+    mutate(FDR = scales::scientific(FDR, digits=3),
+           p_value= scales::scientific(p_value, 3), 
+           score= round(score, 2),
+           model= factor(model),
+           condition= factor(condition),
+           pathway= factor(source), 
+           modal = factor(ifelse(grepl("rna", condition), "RNA", 
+                                 ifelse(grepl("ribo", condition), "Ribo", "Prot")))
+           )%>%
+    select(-statistic, -CellType, -score_sc, -source)%>%
+    select(condition, 
+           modal, model, pathway , everything())%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+  
   })
-  p1= cowplot::plot_grid(plotlist =  pls)
-  p1
+output$func_tb_pw_hs=DT::renderDataTable({
+  df_func%>%
+    filter(database=="progeny", grepl("hs", condition))%>%
+    mutate(FDR = scales::scientific(FDR, digits=3),
+           p_value= scales::scientific(p_value, 3), 
+           score= round(score, 2),
+           #model= factor(model),
+
+           condition= factor(condition),
+           pathway= factor(source), 
+           comparison = factor(sapply(str_split(condition, "_"), `[`, 2)),
+           modal = factor(sapply(str_split(condition, "_"), `[`, 3))
+         
+    )%>%
+    select(-statistic, -CellType, -score_sc, -source, -model)%>%
+    select(condition, comparison, 
+           modal, pathway , everything())%>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                buttons = c("copy", "csv", "excel")))
+  
 })
 
-output$funcA_pw= renderPlot({
-  p1 =(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo)+plot_hmap(prog.res$rn))
-  p1
-})
 
-output$funcA_tb_pw=DT::renderDataTable({
-  lapply(names(prog.res[1:3]), function(x){
-    #df= lapply(names(test), function(x){
-    prog.res[[x]]%>%
-      as.data.frame()%>%
-      rownames_to_column("contrast")%>%
-      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-      mutate(sig= ifelse(abs(score)>2, T, F),
-             score = signif(score, 3))
-  })%>% do.call(rbind, .)%>%
-  mutate(modal = factor(ifelse(grepl("rna", contrast), "rna", "ribo")),
-         model = factor(ifelse(grepl("tac", contrast), "tac",
-                               ifelse(grepl("swim", contrast), "swim", "invitro"))),
-         tp = factor(ifelse(grepl("2d", contrast), "2d", "2wk")),
-         pathway= factor(pathway))%>%
-  dplyr::select(-contrast)%>%
-  DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                extensions = "Buttons", rownames = F,
-                option = list(scrollX = T,
-                              autoWidth = T,
-                              dom = "Bfrtip",
-                              buttons = c("copy", "csv", "excel")))
-  })
 output$funcA_tb_tf= DT::renderDataTable({
   df_tf$mm %>%
     dplyr::select(-statistic)%>%
@@ -614,15 +645,16 @@ output$funcA_tb_tf= DT::renderDataTable({
 
 ## B
 output$funcB_tf_sc=renderPlot({
-  pls= map(input$select_tf, function(x){
-    df_tf$hs_sc%>%
-      filter(source ==toupper(x),
-             condition != "DCMvs\nNF")%>%
-      plot_logfc_gene(., "celltype", y_column= "score", gene = x, fg_name = "condition")+
-      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") 
-    })
-  p1= cowplot::plot_grid(plotlist =  pls)
-  p1
+  if (!is.null(input$select_tf) ){
+   sn_contrast<- df_func %>% filter(grepl("snRNA", condition))%>%
+    pull(condition)%>% unique()
+   
+    p <- get_tf_plot(sn_contrast, 
+                  tfs= input$select_tf,
+                  fg_name = "model",
+              colored_facet=T)
+    return(p)
+  }
 })
 
 output$funcB_tf_tb_sc= DT::renderDataTable({
@@ -642,15 +674,13 @@ output$funcB_tf_tb_sc= DT::renderDataTable({
 })
 
 output$funcB_tf_bulk=renderPlot({
-  pls= map(input$select_tf, function(x){
-    df_tf$hs_magnet %>%
-      filter(source ==toupper(x),
-             condition != "Hs_bulk_DCMvsNF")%>%
-      plot_logfc_gene(., "condition", y_column= "score", gene = x)+
-      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") 
-    })
-  p1= cowplot::plot_grid(plotlist =  pls)
-  p1
+  if (!is.null(input$select_tf) ){
+    p<- get_tf_plot(hcm_contrasts,
+              tfs= input$select_tf, 
+              fg_name = "model",
+              colored_facet=T)
+    return(p)
+  }
 })
 
 output$funcB_tf_tb_bulk= DT::renderDataTable({
@@ -733,15 +763,16 @@ output$funcB_pw_sc_tb=DT::renderDataTable({
 })
 ##C
 output$funcC_tf=renderPlot({
-  pls= map(input$select_tf, function(x){
-    df_tf$hs_reheat%>%
-      filter(source ==toupper(x))%>%
-      plot_logfc_gene(., "study", y= "score", gene = x)+
-      labs(x = "experimental group", y = "TF activity score", fill = "p<0.05") 
-      
-  })
-  p1= cowplot::plot_grid(plotlist =  pls)
-  p1
+  if (!is.null(input$select_tf) ){
+   hf_contrasts<- df_func %>% 
+    filter(grepl("HF|fetal|DCMvs", condition))%>%
+    pull(condition)%>% unique()
+  p<- get_tf_plot(hf_contrasts,
+              tfs= input$select_tf,
+              fg_name = NULL,
+              colored_facet=FALSE)
+  return(p)
+  }
 })
 
 output$funcC_pw= renderPlot({
@@ -766,6 +797,7 @@ output$funcC_pw_tb=DT::renderDataTable({
 })
 
 output$funcC_tf_tb= DT::renderDataTable({
+  
   df_tf$hs_reheat
     dplyr::select(-statistic)%>%
     mutate_if(is.character, as.factor) %>%
@@ -862,8 +894,8 @@ signature = reactive({
          )
 })
 #for trouble shooting:
-#sig = joint_contrast_df %>% filter(cc == "A")
-#gss = example_geneset
+sig = joint_contrast_df %>% filter(cc == "A")
+gss = example_geneset
 
 # perform GSEA with plotting
 gsea_res = eventReactive(input$submit, {
@@ -874,17 +906,20 @@ gsea_res = eventReactive(input$submit, {
       res = fgsea(stats= vect ,
                   pathways= gs()$gene, 
                   nperm = 1000)
-      as.data.frame(res)%>% mutate(cc= x)
+      as.data.frame(res)%>% 
+        mutate(cc= x)
     }) %>% do.call(rbind,. )
     
     p1= df %>% 
       ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
       geom_col()+
-      scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                   "FALSE"="orange"))+
+      scale_fill_manual(values = c("TRUE" = "#4D7298",
+                                   "FALSE"="grey", 
+                                   drop= FALSE))+
       coord_flip()+
       labs(x= "contrast ID", 
-           y= "normalized enrichment score (NES)")
+           y= "normalized enrichment score (NES)", 
+           fill = "FDR<0.05")
     
   } else if (ncol(gs()) == 2) {
     list_gs = gs()%>%
@@ -903,17 +938,21 @@ gsea_res = eventReactive(input$submit, {
       ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
       geom_col()+
       facet_grid(rows= vars(pathway))+
-      scale_fill_manual(values = c("TRUE" = "darkgreen",
-                                   "FALSE"="orange"))+
+      scale_fill_manual(values = c("TRUE" = "#4D7298",
+                                   "FALSE"="grey", 
+                                   drop= FALSE))+
       coord_flip()+
       labs(x= "contrast ID", 
-           y= "normalized enrichment score (NES)")
+           y= "normalized enrichment score (NES)", 
+           fill = "FDR<0.05")
+    
+   
   }
   
 df = df %>% 
   dplyr::select(cc, everything())%>%
   dplyr::rename(geneset = pathway,
-                contrast_ID = cc) %>%
+                contrast_id = cc) %>%
     as_tibble() %>%
     select(-leadingEdge) %>%
     mutate(signature = input$signature_source)
@@ -924,11 +963,12 @@ df = df %>%
 # gsea results as table
 output$gsea_res_table = DT::renderDataTable({
   gsea_res()$df%>%
-  #df%>%
     mutate(NES = signif(NES, 3),
            ES = signif(ES, 3),
-           pval = scientific(pval),
-           padj = scientific(padj)) %>%
+           geneset= factor(geneset), 
+           contrast_id = factor(contrast_id), 
+           pval = scales::scientific(pval),
+           padj = scales::scientific(padj)) %>%
     DT::datatable(escape=F, filter = "top", selection = list(target = "column"),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 

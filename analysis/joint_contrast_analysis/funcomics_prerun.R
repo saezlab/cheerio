@@ -6,8 +6,15 @@ library(dorothea)
 data("dorothea_hs")
 data("dorothea_mm")
 
+collectri_hs<- decoupleR::get_collectri()
+prog_hs<- decoupleR::get_progeny()
+
+collectri_rn<- decoupleR::get_collectri(organism = "rat")
+collectri_mm<- decoupleR::get_collectri(organism = "mouse")
+prog_hs<- decoupleR::get_progeny()
+
 contrasts = readRDS("data/contrasts.hypertrophy.rds")
-joint_contrast_df= readRDS("data/contrasts_query_df.rds")
+joint_contrast_df= readRDS("app_data/contrasts_query_df_translated3.rds")
 
 # prepare contrast data in matrix format ------------------------------------------------------
 

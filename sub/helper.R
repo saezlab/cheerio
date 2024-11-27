@@ -307,6 +307,7 @@ get_top_consistent_gene2 <-
 plot_logfc_gene = function(red_contrast_df, 
                            x_column= "contrast_id", 
                            y_column= "logFC", 
+                           y_column_label= "log fold change",
                            fg_name= NULL, 
                            max_fc, 
                            min_fc,
@@ -317,26 +318,26 @@ plot_logfc_gene = function(red_contrast_df,
   if(max_fc<0){max_fc= 0}
   
   p1= red_contrast_df %>%
-  ggplot(aes(x = !!rlang::ensym(x_column), y = !!rlang::ensym(y_column), fill = sig)) +
-    geom_hline(yintercept = 0, color= "black")+
-    geom_col(width= 0.4, color ="black") +
-    theme_cowplot()+
-    scale_x_discrete(drop=FALSE)+
-    scale_fill_manual(values = c("TRUE" = "#4D7298",
-                                 "FALSE"="darkgrey", 
-                                 drop= FALSE))+
-    labs(x = "", y = "log fold change", fill = "FDR<0.05") +
-    theme(panel.grid.major = element_line(color = "grey",
-                                          linewidth = 0.1,
-                                          linetype = 1),
-          panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
-          panel.grid.minor = element_blank(),
-          axis.line = element_blank(),
-          axis.text = element_text(size= 11), 
-          axis.title = element_text(size= 10)) +
-    coord_flip()+
-    ggtitle(gene)+
-    ylim(c(min_fc, max_fc))
+    ggplot(aes(x = !!rlang::ensym(x_column), y = !!rlang::ensym(y_column), fill = sig)) +
+      geom_hline(yintercept = 0, color= "black")+
+      geom_col(width= 0.4, color ="black") +
+      theme_cowplot()+
+      scale_x_discrete(drop=FALSE)+
+      scale_fill_manual(values = c("TRUE" = "#4D7298",
+                                   "FALSE"="grey", 
+                                   drop= FALSE))+
+      labs(x = "", y = y_column_label, fill = "FDR<0.05") +
+      theme(panel.grid.major = element_line(color = "grey",
+                                            linewidth = 0.1,
+                                            linetype = 1),
+            panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+            panel.grid.minor = element_blank(),
+            axis.line = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10)) +
+      coord_flip()+
+      ggtitle(gene)+
+      ylim(c(min_fc, max_fc))
   
   #legend <- cowplot::get_legend(p1)
   p1 <- remove_legend(p1)
@@ -507,3 +508,63 @@ generate_drugstone_url <- function(node_vec, identifier = "symbol", autofill_edg
   
   return(url)
 }
+
+
+
+# wrappers  ---------------------------------------------------------------
+
+get_tf_plot<- function(contrast_ids,
+                       tfs, 
+                       ...){
+    # separate the modal time point and model vars: 
+    to_plot_df= df_func %>% 
+      filter(source %in% tfs,
+             condition %in% contrast_ids)
+    
+    fc_vec = to_plot_df %>% 
+      pull(score)
+    
+    p= map(tfs, function(x){
+      to_plot_df= to_plot_df %>% 
+        filter(source==x)
+      
+      #rows of plot df
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "\nwas not captured\nin data" )
+        p <- ggplot()+ 
+          annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+          theme_void()
+        return(
+          p
+        )
+      }else{
+        p = plot_logfc_gene(red_contrast_df = to_plot_df, 
+                            x_column = "condition", 
+                            y_column = "score", 
+                            y_column_label= "TF activity", 
+                            #fg_name = "model",  
+                            gene= x, 
+                            max_fc = max(fc_vec), 
+                            min_fc = min(fc_vec),
+                            #colored_facet = F,
+                            ...
+        )
+        return(p)
+      }
+      
+      
+    })
+    
+    
+    # Combine plots without legends and the legend on the right
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(6, 1)         # Adjust width ratio
+    )
+    
+    return(final_plot)
+  
+}
+

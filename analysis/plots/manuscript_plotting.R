@@ -10,9 +10,11 @@ contrasts_oi <- c.df %>%
   filter(!grepl("snRNA_", contrast_id) | grepl("snRNA_CM|snRNA_FB", contrast_id)) %>%
   filter(!grepl("HCMvsDCM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
+
 contrasts_oi
 
-c.df2<-c.df %>% filter(contrast_id %in% contrasts_oi)
+c.df2 <- c.df %>% 
+  filter(contrast_id %in% contrasts_oi)
 # plot histogram of contrasts and genes -----------------------------------
 
 length(unique(c.df$gene))

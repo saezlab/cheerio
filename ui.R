@@ -311,35 +311,17 @@ tabPanel(
             type = "tabs",
             tabPanel("A. Animal models",
                      h3("Transcription factor activities"),
-                     plotOutput("funcA_tf"),#, width = "100%", height = "600px"),
+                     plotOutput("funcA_tf", width = "100%", height= "800px"),#, width = "100%", height = "600px"),
                      p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks;
                swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
                      br(),
                      br(),
-                     hr(),
-                     h3("Pathway activities"),
-                     plotOutput("funcA_pw"),#, width = "100%", height = "600px"),
-                     br(),
-                     br(),
-                     hr(),
-                      tabsetPanel(
-                        type = "tabs",
-                        tabPanel("TF-activities",
-                                 DT::dataTableOutput("funcA_tb_tf")),
-                         tabPanel("Pathway-activities",
-                                DT::dataTableOutput("funcA_tb_pw"))
-                      )
-
-            ),
+                     hr()
+                     ),
             tabPanel("B. Human Hypertrophic Cardiomyopathy",
                      ##Magnet
                      h3("Transcription factor activities - bulk HCM"),
                      plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
-                     br(),
-                     
-                     h3("Pathway activities - bulk HCM"),
-                     plotOutput("funcB_pw_bulk", width = "100%", height = "500px"),
-                     
                      br(),
                      br(),
                      hr(),
@@ -347,58 +329,37 @@ tabPanel(
                      plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
                      br(),
                      br(),
-                     hr(),
-                     h3("Pathway activities - single cell HCM"),
-                     plotOutput("funcB_pw_sc", width = "100%", height = "500px"),
-                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
-                     br(),
-                     br(),
-                     hr(),
-                     tabsetPanel(
-                       type = "tabs",
-                       tabPanel("TF-activities bulk",
-                                DT::dataTableOutput("funcB_tf_tb_bulk")),
-                       tabPanel("TF-activities single cell ",
-                                DT::dataTableOutput("funcB_tf_tb_sc")),
-                       tabPanel("Pathway-activities bulk",
-                                DT::dataTableOutput("funcB_pw_bulk_tb")),
-                       tabPanel("Pathway-activities single cell",
-                                DT::dataTableOutput("funcB_pw_sc_tb"))
-                     )
+                     hr()
+                     # 
+                     # tabsetPanel(
+                     #   type = "tabs",
+                     #   tabPanel("TF-activities bulk",
+                     #            DT::dataTableOutput("funcB_tf_tb_bulk")),
+                     #   tabPanel("TF-activities single cell ",
+                     #            DT::dataTableOutput("funcB_tf_tb_sc")),
+                     #   tabPanel("Pathway-activities bulk",
+                     #            DT::dataTableOutput("funcB_pw_bulk_tb")),
+                     #   tabPanel("Pathway-activities single cell",
+                     #            DT::dataTableOutput("funcB_pw_sc_tb"))
+                     # )
             ),
-            tabPanel("C. Human Heart Failure",
+            tabPanel("C+ D. Human Heart Failure and Fetal Program",
                      h3("Transcription factor activities"),
                     plotOutput("funcC_tf", width = "100%", height = "500px") %>%
                      withSpinner(),
                     br(),
                     br(),
-                    hr(),
-                    h3("Pathway activities"),
-                     plotOutput("funcC_pw", height= "250px"),
-                    tabsetPanel(
-                      type = "tabs",
-                      tabPanel("TF-activities",
-                               DT::dataTableOutput("funcC_tf_tb")),
-                      tabPanel("Pathway-activities",
-                               DT::dataTableOutput("funcC_pw_tb"))
-                    )
-                     ),
-            tabPanel("D. Fetal gene program",
-                     h3("Transcriptionfactor activities"),
-                     plotOutput("funcD_tf", height= "250px"),
-                     br(),
-                     br(),
-                     hr(),
+                    hr()
+                    ),
+            tabPanel("Pathway Activities",
                      h3("Pathway activities"),
-                     plotOutput("funcD_pw", height= "250px"),
-                     p("rna_fetal1, fetal study 1 (Spurell et al, 2022); rna_fetal2, fetal study 2 (Akat et al, 2014)"),
                      tabsetPanel(
                        type = "tabs",
-                       tabPanel("TF-activities",
-                                DT::dataTableOutput("funcD_tf_tb")),
-                       tabPanel("Pathway-activities",
-                                DT::dataTableOutput("funcD_pw_tb"))
-                     )
+                       tabPanel("Animal Models",
+                                DT::dataTableOutput("func_tb_pw_mm")),
+                       tabPanel("Humans",
+                                DT::dataTableOutput("func_tb_pw_hs"))
+                       )
                      )
             )
           )

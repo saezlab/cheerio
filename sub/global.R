@@ -6,7 +6,6 @@ library(shinyWidgets)
 library(shinyhelper)
 library(shinyjs)
 library(DT)
-# remotes::install_github("christianholland/AachenColorPalette")
 #library(forcats)
 library(scales)
 library(dplyr)
@@ -20,10 +19,8 @@ library(readr)
 library(stringr)
 library(shinycssloaders)
 #plotting: 
-#library(RColorBrewer)
-library(eulerr)
+
 library(plotly)
-#library(AachenColorPalette) 
 library(cowplot)
 library(ggpmisc)
 library(broom)
@@ -55,8 +52,9 @@ df_func= readRDS("app_data/funcomics_precalc.rds")
 TFs <- unique(df_func%>% filter(database == "collectri")%>% pull(source))
 
 #contrast query:
-#joint_contrast_df= readRDS( "app_data/contrasts_query_df.rds")
+
 joint_contrast_df= readRDS( "app_data/contrasts_query_df_translated3.rds")
+
 
 ipmc_data= readRDS("app_data/ipmc_data.rds")
 

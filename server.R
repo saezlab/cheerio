@@ -196,63 +196,50 @@ output$HFgene_regulation_magnet = renderPlot({
 
 ## human HCM single cell
 output$HF_single = renderPlot({
-  sn_contrasts <- df_func%>%
-         filter(grepl("snRNA", condition))%>%
-    pull(condition)%>% unique()
+  sn_contrasts <- joint_contrast_df%>%
+         filter(grepl("snRNA", contrast_id))%>%
+    pull(contrast_id)%>% unique()
   
-  get_tf_plot(sn_contrasts, fg_name= "model", colored_facet = T)
+  if (!is.null(input$select_gene) ) {
+    fc_vec <- joint_contrast_df %>% 
+      filter(gene %in% input$select_gene,
+             contrast_id %in% sn_contrasts)%>% 
+      pull(logFC)
+    
+    p= map(input$select_gene, function(x){
+      # prep single study df
+      to_plot_df= joint_contrast_df %>% 
+        filter(gene %in% input$select_gene,
+               contrast_id %in% sn_contrasts)
+      # plot
+      if(dim(to_plot_df)[1]<1){
+        error_text2 <- paste(x , "was not captured\nin data" )
+        return(
+          ggplot() + 
+            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
+            theme_void()   
+        )
+      }else{
+        return(
+          plot_logfc_gene(to_plot_df, 
+                          gene= x,
+                          max_fc = max(fc_vec), 
+                          min_fc= min(fc_vec))
+        )
+      }
+    })
+    
+    final_plot <- cowplot::plot_grid(
+      cowplot::plot_grid(plotlist = p), # All plots without legends
+      legend_lfc_plot,                 # Single legend is loaded in global.R
+      ncol = 2,                                   # Arrange side by side
+      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+    )
+    
+    return(final_plot)
+  }
   
-  # if (!is.null(input$select_gene) ) {
-  #   
-  #   to_plot_df= joint_contrast_df%>%
-  #     filter(grepl("snRNA", contrast_id))%>%
-  #     mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
-  #            Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
-  #                                levels= c( "HCMvsNF","HCMvsDCM")
-  #                                )
-  #            )
-  #   
-  #   fc_vec = to_plot_df %>%
-  #     filter(gene %in% input$select_gene)%>% 
-  #     pull(logFC)
-  #   
-  #   p= map(input$select_gene, function(x){
-  #     to_plot_df= to_plot_df%>%
-  #       filter(gene==x)
-  #     
-  #     if(dim(to_plot_df)[1]<1){
-  #       error_text2 <- paste(x , "\nwas not captured\nin data" )
-  #       p <- ggplot()+ 
-  #           annotate("text", x = 4, y = 25, size=6, label = error_text2)+
-  #           theme_void()
-  #       return(
-  #         list("p"= p, "leg"= NA)
-  #       )
-  #     }else{
-  #       return(
-  #         plot_logfc_gene(red_contrast_df = to_plot_df, 
-  #                         x_column =  "CellType", 
-  #                         fg_name = "Comparison", 
-  #                         gene= x,
-  #                         max_fc = max(fc_vec), 
-  #                         min_fc = min(fc_vec),
-  #                         colored_facet= F
-  #         )  
-  #       )
-  #     }  
-  #     
-  #   })
-  #   
-  #   final_plot <- cowplot::plot_grid(
-  #     cowplot::plot_grid(plotlist = p), # All plots without legends
-  #     legend_lfc_plot,                 # Single legend is loaded in global.R
-  #     ncol = 2,                                   # Arrange side by side
-  #     rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
-  #   )
-  #   
-  #   return(final_plot)
-  # }
-})
+ })
 
 ## C
 ## reheat (human HF): 
@@ -307,7 +294,7 @@ output$rank_position = renderPlotly({
     rank_plot = sub_ranks %>%
       ggplot(aes(x=rank, y=1, label = gene)) +
       geom_segment(mapping = aes(y = 0.5, xend = rank, yend = 1.5), 
-                   size = 0.5, color=aachen_color("red"), alpha=0.5) +
+                   size = 0.5, color="darkred", alpha=0.5) +
       geom_hline(yintercept = 1, size=1.5) +
       theme_classic() +
       theme(
@@ -334,7 +321,7 @@ output$mean_t_dist = renderPlotly({
     dens = ranks %>%
       ggplot(aes(x=mean_t, label = gene)) +
       stat_density(geom = "line") +
-      geom_rug(data = sub_ranks, color=aachen_color("red"), size=1) +
+      geom_rug(data = sub_ranks, color= "darkred", size=1) +
       theme_classic() +
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
       labs(x = "mean t-value", y="density")

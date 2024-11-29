@@ -289,83 +289,162 @@ tabPanel(
 tabPanel(
         title = "Functional Genomics",
         icon = icon("chart-line"),
-        sidebarPanel(
-          includeMarkdown("inst/functional_analysis_sidebar.md"),
-
-
-          p("Choose the contrast to display functional footprinting results"),
-        
-          pickerInput(inputId = "select_tf",
+        tabsetPanel(
+          type = "tabs",
+          tabPanel("Query a TF", 
+                   br(),
+            sidebarPanel(
+              includeMarkdown("inst/functional_analysis_sidebar.md"),
+              p("Choose the contrast to display functional footprinting results"),
+              pickerInput(inputId = "select_tf",
                       label = "Select transcription factor(s)",
                       choices = sort(TFs),
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=6, `max-options` = 6)
-                      #selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
-          ),
-          actionButton("reset_input_TF", "Reset TFs")
-
-        ),
-        mainPanel(
-          tabsetPanel(
-            type = "tabs",
-            tabPanel("A. Animal models",
-                     h3("Transcription factor activities"),
-                     plotOutput("funcA_tf", width = "100%", height= "800px"),#, width = "100%", height = "600px"),
-                     p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks;
-               swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                                     size=6, `max-options` = 6),
+                      selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
+                      ),
+              actionButton("reset_input_TF", "Reset TFs")
+              ),
+            mainPanel(
+              tabsetPanel(
+                type = "tabs",
+                tabPanel("A. Animal models",
+                         h3("Transcription factor activities"),
+                         plotOutput("funcA_tf", width = "100%", height= "800px"),#, width = "100%", height = "600px"),
+                         p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks;
+                           swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                         br(),
+                         br(),
+                         hr()
+                         ),
+                tabPanel("B. Human Hypertrophic Cardiomyopathy",
+                         ##Magnet
+                         h3("Transcription factor activities - bulk HCM"),
+                         plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
+                         br(),
+                         br(),
+                         hr(),
+                         h3("Transcription factor activities - single cell HCM"),
+                         plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
+                         br(),
+                         br(),
+                         hr()
+                         ),
+                tabPanel("C+ D. Human Heart Failure and Fetal Program",
+                         h3("Transcription factor activities"),
+                        plotOutput("funcC_tf", width = "100%", height = "500px") %>%
+                         withSpinner(),
+                        br(),
+                        br(),
+                        hr()
+                        )
+                )# tabset panel (ABCD)
+              )# main panel ()
+            ), # query TF panel
+          tabPanel("Conserved TFs", 
+                   br(),
+                   sidebarPanel(
+                     includeMarkdown("inst/query_contrasts_sidebar.md"),
                      br(),
-                     br(),
-                     hr()
+                     #hr(),
+                     strong("1. Select contrast(s)"),
+                     br(), 
+                     pickerInput(inputId = "select_contrast_mm_tf", 
+                                 label = "A) Animal studies:",
+                                 choices = sort(df_func%>% filter(cc =="A")%>% pull(condition)%>% unique()), 
+                                 multiple = T,
+                                 options = list(`live-search` = TRUE,
+                                                size=10, `max-options` = 10),
+                                 selected = c("mm_TAC_RNA_2w") 
                      ),
-            tabPanel("B. Human Hypertrophic Cardiomyopathy",
-                     ##Magnet
-                     h3("Transcription factor activities - bulk HCM"),
-                     plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
+                     
+                     pickerInput(inputId = "select_contrast_hs_tf", 
+                                 label = "B) Human HCM studies:",
+                                 choices = sort(df_func%>% filter(cc =="B")%>% pull(condition)%>% unique()), 
+                                 multiple = T,
+                                 options = list(`live-search` = TRUE,
+                                                size=10, `max-options` = 10),
+                                 selected = c("hs_HCMvsNF_snRNA_CM", "hs_HCMvsNF_RNA") 
+                     ),
+                     
+                     pickerInput(inputId = "select_contrast_hs2_tf", 
+                                 label = "C+D) Human HF or fetal gene program",
+                                 choices = df_func%>% filter(cc %in% c("C", "D"))%>% pull(condition)%>% unique(), 
+                                 multiple = T,
+                                 options = list(`live-search` = TRUE,
+                                                size=10, `max-options` = 10),
+                                 selected = c("hs_fetal_RNA") 
+                     ),
+                     
+                     actionButton(inputId = "reset_input_contrasts_tf", label = "Reset contrasts"),
                      br(),
-                     br(),
+                     #br(),
                      hr(),
-                     h3("Transcription factor activities - single cell HCM"),
-                     plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
+                     pickerInput(inputId = "select_alpha_tf", 
+                                 label = "2. Select alpha for FDR cut off:",
+                                 choices = c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2), 
+                                 multiple = F,
+                                 options = list(`live-search` = TRUE,
+                                                size=10, `max-options` = 10),
+                                 selected = 0.05
+                     ),
+                     
+                     # sliderInput("cut_off_tfs", "3. Select number of TFs to plot:",
+                     #             min = 1, max = 70,
+                     #             value = 10, step= 1),
+                     hr(),
+                     sliderInput("missing_prop_tf", "4. Select minimum number of contrasts to report a TF",
+                                 min = 1, max = 10,
+                                 value = 1, step= 1),
+                     br(), 
+                     strong("5. Compare contrasts!"), 
+                     br(), 
+                     actionButton(inputId = "submit_contrast_tf", label="Submit",
+                                  icon=icon("paper-plane")) 
+                   ),
+                   mainPanel(
+                     h3("Search for consistent genes"),
+                     h4("Dysregulated genes (FDR-cutoff)"),
+                     plotOutput("cq_hist_tf")%>%withSpinner(),
+                     p("A. Barplot displays the overlap between the selected contrasts. Red indicates the number of genes for Signature generation."),
+                     p("B. Barplot displays the number of genes of the intersect left that and their directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
+                     p(""),
+                     hr(),
                      br(),
                      br(),
-                     hr()
-                     # 
-                     # tabsetPanel(
-                     #   type = "tabs",
-                     #   tabPanel("TF-activities bulk",
-                     #            DT::dataTableOutput("funcB_tf_tb_bulk")),
-                     #   tabPanel("TF-activities single cell ",
-                     #            DT::dataTableOutput("funcB_tf_tb_sc")),
-                     #   tabPanel("Pathway-activities bulk",
-                     #            DT::dataTableOutput("funcB_pw_bulk_tb")),
-                     #   tabPanel("Pathway-activities single cell",
-                     #            DT::dataTableOutput("funcB_pw_sc_tb"))
-                     # )
-            ),
-            tabPanel("C+ D. Human Heart Failure and Fetal Program",
-                     h3("Transcription factor activities"),
-                    plotOutput("funcC_tf", width = "100%", height = "500px") %>%
-                     withSpinner(),
-                    br(),
-                    br(),
-                    hr()
-                    ),
-            tabPanel("Pathway Activities",
+                     h4("Full signature of dysregulated gene(s)"),
+                     
+                     plotOutput("hmap_top_tf")%>%withSpinner(),
+                     hr(),
+                     br(),
+                     br(),
+                     
+                     h4("Top consistently dysregulated gene(s)"),
+                     plotOutput("cq_top_tf")%>%withSpinner(),
+                     hr(),
+                     br(),
+                     br()
+                     )#main panel conserved tfs
+                   ),# conserved TF panel
+          tabPanel("Pathway activities", 
+                   br(),
+                   sidebarPanel(),
+                   mainPanel(                    
                      h3("Pathway activities"),
                      tabsetPanel(
                        type = "tabs",
                        tabPanel("Animal Models",
                                 DT::dataTableOutput("func_tb_pw_mm")),
                        tabPanel("Humans",
-                                DT::dataTableOutput("func_tb_pw_hs"))
+                                DT::dataTableOutput("func_tb_pw_hs"))                            
                        )
                      )
-            )
-          )
+                   
+          ),
+          )# TF- pway- tf search
         ),
 
-      
       #### Input data ####
       tabPanel(
         title = "Enrichment analysis",
@@ -403,14 +482,14 @@ tabPanel(
       
       #### Download Center ####
       tabPanel(
-        title = "Download Center",
+        title = "Acess Data",
         icon = icon("table"),
         sidebarPanel(
           includeMarkdown("inst/meta_analysis_results_sidebar.md")
         ),
         mainPanel(
-          h5("Download gene expression contrast data"),
-          h6("Select your desired contrast, explore and sort data in table format or download"),
+          h4("Query data in a convenient table format"),
+          h6("Select your desired contrasts, sort and filter data in table format"),
           tabsetPanel(
             type = "tabs",
             tabPanel("A. Animal Models", DT::dataTableOutput("mouse_hypertrophyDT"),
@@ -420,10 +499,17 @@ tabPanel(
            tabPanel("C. Human HF",  DT::dataTableOutput("human_HF_bulk_summDT"),
                      br(), p("Download full data from zenodo, LINK")),
             tabPanel("D. Fetal gene program", DT::dataTableOutput("human_fetalDT"),
-                     br(), p("Download full data from zenodo, LINK"))
-          ),
+                     br()
+                     )
+           ),
           br(), 
           hr(),
+          h4("How to acess full data"),
+          br(),
+          p("We provide a full data set of contrasts to be downloaded
+            from Zenodo. LINK"),
+          p("You can download the .zip file and access the processed data")
+          
           
         )
       )

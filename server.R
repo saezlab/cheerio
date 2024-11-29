@@ -147,11 +147,15 @@ output$HFgene_regulation_magnet = renderPlot({
              gene %in% input$select_gene)%>%
       pull(logFC)
     
+    to_plot_df<-joint_contrast_df %>% 
+      filter(contrast_id %in% hcm_contrasts)%>%
+      mutate(contrast_id = factor(contrast_id))%>%
+      mutate(modal= factor(modal))
+    
     p= map(input$select_gene, function(x){
 
-      to_plot_df<-joint_contrast_df %>% 
-        filter(gene== x, 
-               contrast_id %in% hcm_contrasts)
+      to_plot_df <- to_plot_df %>%
+        filter(gene== x)
         # mutate(contrast_id =factor(contrast_id, 
         #                            levels=hcm_contrasts))
       if(dim(to_plot_df)[1]<1){
@@ -201,39 +205,50 @@ output$HF_single = renderPlot({
     pull(contrast_id)%>% unique()
   
   if (!is.null(input$select_gene) ) {
-    fc_vec <- joint_contrast_df %>% 
-      filter(gene %in% input$select_gene,
-             contrast_id %in% sn_contrasts)%>% 
+    to_plot_df= joint_contrast_df%>%
+      filter(grepl("snRNA", contrast_id))%>%
+      mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
+             Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
+                                 levels= c( "HCMvsNF","HCMvsDCM")
+             )
+      )
+    
+    fc_vec = to_plot_df %>%
+      filter(gene %in% input$select_gene)%>% 
       pull(logFC)
     
     p= map(input$select_gene, function(x){
-      # prep single study df
-      to_plot_df= joint_contrast_df %>% 
-        filter(gene %in% input$select_gene,
-               contrast_id %in% sn_contrasts)
-      # plot
+      to_plot_df= to_plot_df%>%
+        filter(gene==x)
+      
       if(dim(to_plot_df)[1]<1){
-        error_text2 <- paste(x , "was not captured\nin data" )
+        error_text2 <- paste(x , "\nwas not captured\nin data" )
+        p <- ggplot()+ 
+          annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+          theme_void()
         return(
-          ggplot() + 
-            annotate("text", x = 4, y = 25, size=8, label = error_text2) + 
-            theme_void()   
+          list("p"= p, "leg"= NA)
         )
       }else{
         return(
-          plot_logfc_gene(to_plot_df, 
+          plot_logfc_gene(red_contrast_df = to_plot_df, 
+                          x_column =  "CellType", 
+                          fg_name = "Comparison", 
                           gene= x,
                           max_fc = max(fc_vec), 
-                          min_fc= min(fc_vec))
+                          min_fc = min(fc_vec),
+                          colored_facet= T
+          )  
         )
-      }
+      }  
+      
     })
-    
+   
     final_plot <- cowplot::plot_grid(
       cowplot::plot_grid(plotlist = p), # All plots without legends
       legend_lfc_plot,                 # Single legend is loaded in global.R
       ncol = 2,                                   # Arrange side by side
-      rel_widths = c(length(input$select_gene)*2, 1)         # Adjust width ratio
+      rel_widths = c(length(input$select_gene)*2, 1.5)         # Adjust width ratio
     )
     
     return(final_plot)
@@ -389,14 +404,6 @@ observeEvent(input$reset_input_contrasts, {
   )
 })
 
-# output$selected_count <- renderText({
-#   selected_count <- length(c(input$select_contrast_mm,
-#                              input$select_contrast_hs,
-#                              input$select_contrast_hs2
-#                              ))
-#   #paste("Number of selected inputs: ", selected_count)
-# })
-
 observe({
   selected_count <- length(c(input$select_contrast_mm,
                              input$select_contrast_hs,
@@ -424,9 +431,6 @@ cont_res = eventReactive(input$submit_contrast, {
 
 output$cq_hist= renderPlot({
   cont_res()$p.hist
-})
-output$cq_venn= renderPlot({
-  cont_res()$p.venn
 })
 
 output$cq_top=renderPlot({
@@ -533,7 +537,7 @@ output$drugst_one_link <- renderUI({
 
 
 #### Functional analysis ####
-# progeny
+# buttons: 
 observeEvent(input$reset_input_TF, {
   updatePickerInput(session,
                     inputId = "select_tf", selected = character(0)
@@ -542,6 +546,7 @@ observeEvent(input$reset_input_TF, {
 # input= list()
 # input$select_tf = c("TRP73", "ZEB2", "AHR", "APEX1")
 
+## PANEL Query TFS
 # ## A. Animal
 output$funcA_tf= renderPlot({
   if (!is.null(input$select_tf) ){
@@ -557,78 +562,7 @@ output$funcA_tf= renderPlot({
   }
  })
 
-# output$funcA_pw= renderPlot({
-#   df_func%>% filter(database=="progeny")
-#   p1 =(plot_hmap(prog.res$mmRNA)+plot_hmap(prog.res$mmRibo)+plot_hmap(prog.res$rn))
-#   p1
-# })
 
-output$func_tb_pw_mm=DT::renderDataTable({
-  df_func%>%
-    filter(database=="progeny", !grepl("hs", condition))%>%
-    mutate(FDR = scales::scientific(FDR, digits=3),
-           p_value= scales::scientific(p_value, 3), 
-           score= round(score, 2),
-           model= factor(model),
-           condition= factor(condition),
-           pathway= factor(source), 
-           modal = factor(ifelse(grepl("rna", condition), "RNA", 
-                                 ifelse(grepl("ribo", condition), "Ribo", "Prot")))
-           )%>%
-    select(-statistic, -CellType, -score_sc, -source)%>%
-    select(condition, 
-           modal, model, pathway , everything())%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-  
-  })
-output$func_tb_pw_hs=DT::renderDataTable({
-  df_func%>%
-    filter(database=="progeny", grepl("hs", condition))%>%
-    mutate(FDR = scales::scientific(FDR, digits=3),
-           p_value= scales::scientific(p_value, 3), 
-           score= round(score, 2),
-           #model= factor(model),
-
-           condition= factor(condition),
-           pathway= factor(source), 
-           comparison = factor(sapply(str_split(condition, "_"), `[`, 2)),
-           modal = factor(sapply(str_split(condition, "_"), `[`, 3))
-         
-    )%>%
-    select(-statistic, -CellType, -score_sc, -source, -model)%>%
-    select(condition, comparison, 
-           modal, pathway , everything())%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-  
-})
-
-
-output$funcA_tb_tf= DT::renderDataTable({
-  df_tf$mm %>%
-    dplyr::select(-statistic)%>%
-    mutate_if(is.character, as.factor) %>%
-    mutate(score = signif(score, 3),
-           p_value = scientific(p_value),
-    ) %>%
-    #adj_pvalue = scientific(adj_pvalue),
-    #source = factor(source, levels = sort(source))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
 
 ## B
 output$funcB_tf_sc=renderPlot({
@@ -639,6 +573,15 @@ output$funcB_tf_sc=renderPlot({
     p <- get_tf_plot(sn_contrast, 
                   tfs= input$select_tf,
                   fg_name = "model",
+              colored_facet=T)
+    return(p)
+  }
+})
+output$funcB_tf_bulk=renderPlot({
+  if (!is.null(input$select_tf) ){
+    p<- get_tf_plot(hcm_contrasts,
+              tfs= input$select_tf, 
+              fg_name = "model",
               colored_facet=T)
     return(p)
   }
@@ -660,94 +603,6 @@ output$funcB_tf_tb_sc= DT::renderDataTable({
                                 buttons = c("copy", "csv", "excel")))
 })
 
-output$funcB_tf_bulk=renderPlot({
-  if (!is.null(input$select_tf) ){
-    p<- get_tf_plot(hcm_contrasts,
-              tfs= input$select_tf, 
-              fg_name = "model",
-              colored_facet=T)
-    return(p)
-  }
-})
-
-output$funcB_tf_tb_bulk= DT::renderDataTable({
-df_tf$hs_magnet%>%
-    dplyr::select(-statistic)%>%
-    mutate_if(is.character, as.factor) %>%
-    mutate(score = signif(score, 3),
-           p_value = scientific(p_value),
-    ) %>%
-    #adj_pvalue = scientific(adj_pvalue),
-    #source = factor(source, levels = sort(source))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-output$funcB_pw_bulk = renderPlot({
-  p1 =plot_hmap(prog.res$hsmagnet)
-  p1
-})
-
-output$funcB_pw_bulk_tb=DT::renderDataTable({
-  prog.res$hsmagnet%>%
-    as.data.frame()%>%
-    rownames_to_column("contrast")%>%
-    mutate_if(is.character, as.factor) %>%
-    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-    mutate(sig= ifelse(abs(score)>2, T, F),
-           score = signif(score, 3))%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-output$funcB_pw_sc = renderPlot({
-  sc.df.prg =prog.res$hsSC
-  sc.hmaps= lapply(names(sc.df.prg), function(x){
-    plot_hmap(sc.df.prg[[x]], x,
-              max.ps = c(min(sapply(sc.df.prg, min)),
-                         max(sapply(sc.df.prg, max)))
-    )
-  })
-  names(sc.hmaps)= names(sc.df.prg)
-  p1= eval(parse(text= paste(paste0("sc.hmaps$",paste0("`", names(sc.hmaps), "`")),  collapse = " + ")))
-  #p1 =plot_hmap(contrast_ID()$prog$reheat)
-  p1
-})
-
-output$funcB_pw_sc_tb=DT::renderDataTable({
-  df= lapply(names(prog.res$hsSC), function(x){
-    prog.res$hsSC[[x]] %>%
-      as.data.frame()%>%
-      rownames_to_column("contrast")%>%
-      pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-      mutate(celltype= factor(x),
-             pathway= factor(pathway),
-             contrast= factor(contrast),
-             #sig= factor(sig)
-      )
-  })%>% do.call(rbind, .)
-  df%>%
-    as.data.frame()%>%
-    filter(contrast!="DCMvs.NF")%>%
-    mutate_if(is.character, as.factor) %>%
-    mutate(sig= factor(ifelse(abs(score)>2, T, F)),
-           score = signif(score, 3))%>%
-    dplyr::select(contrast, celltype, everything())%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
 ##C
 output$funcC_tf=renderPlot({
   if (!is.null(input$select_tf) ){
@@ -762,45 +617,6 @@ output$funcC_tf=renderPlot({
   }
 })
 
-output$funcC_pw= renderPlot({
-  p1 =plot_hmap(prog.res$hsReheat)
-  p1
-})
-
-output$funcC_pw_tb=DT::renderDataTable({
-  prog.res$hsReheat%>%
-    as.data.frame()%>%
-    rownames_to_column("contrast")%>%
-    mutate_if(is.character, as.factor) %>%
-    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-    mutate(sig= ifelse(abs(score)>2, T, F),
-           score = signif(score, 3))%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-output$funcC_tf_tb= DT::renderDataTable({
-  
-  df_tf$hs_reheat
-    dplyr::select(-statistic)%>%
-    mutate_if(is.character, as.factor) %>%
-    mutate(score = signif(score, 3),
-           p_value = scientific(p_value),
-    ) %>%
-    #adj_pvalue = scientific(adj_pvalue),
-    #source = factor(source, levels = sort(source))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
 ##D
 output$funcD_tf= renderPlot({
   pls= map(input$select_tf, function(x){
@@ -813,47 +629,106 @@ output$funcD_tf= renderPlot({
   p1
 })
 
-output$funcD_tf_tb= DT::renderDataTable({
-  df_tf$hs_fetal%>%
-    dplyr::select(-statistic)%>%
-    mutate_if(is.character, as.factor) %>%
-    mutate(score = signif(score, 3),
-           p_value = scientific(p_value),
-    ) %>%
-    #adj_pvalue = scientific(adj_pvalue),
-    #source = factor(source, levels = sort(source))) %>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-output$funcD_pw= renderPlot({
-    p1 =plot_hmap(prog.res$hsfetal)
-  p1
-})
-
-output$funcD_pw_tb=DT::renderDataTable({
-  prog.res$hsfetal%>%
-    as.data.frame()%>%
-    rownames_to_column("contrast")%>%
-    mutate_if(is.character, as.factor) %>%
-    pivot_longer(-contrast, names_to= "pathway", values_to= "score")%>%
-    mutate(sig= ifelse(abs(score)>2, T, F),
-           score = signif(score, 3))%>%
-    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
-                  extensions = "Buttons", rownames = F,
-                  option = list(scrollX = T,
-                                autoWidth = T,
-                                dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
-})
-
-
 
 hide("loading-content", TRUE, "fade")
+
+## PANEL QUERY TFs
+observeEvent(input$reset_input_contrasts_tf, {
+  updatePickerInput(session,
+                    inputId = "select_contrast_hs_tf", selected = character(0)
+  )
+  updatePickerInput(session,
+                    inputId = "select_contrast_mm_tf", selected = character(0)
+  )
+  updatePickerInput(session,
+                    inputId = "select_contrast_hs2_tf", selected = character(0)
+  )
+})
+
+observe({
+  selected_count_tf <- length(c(input$select_contrast_mm_tf,
+                             input$select_contrast_hs_tf,
+                             input$select_contrast_hs2_tf
+  ))
+ 
+  updateSliderInput(session = session, "missing_prop_tf",
+                    max = selected_count_tf,  # default, will be updated dynamically
+                    value = selected_count_tf
+  )
+})
+
+cont_res_tf = eventReactive(input$submit_contrast_tf, {
+  res= get_consistent_tfs(df_func = df_func, 
+                                query_contrasts = c(input$select_contrast_mm_tf,
+                                                    input$select_contrast_hs_tf,
+                                                    input$select_contrast_hs2_tf),
+                                #cutoff = input$cut_off_tfs,
+                                alpha= as.numeric(input$select_alpha_tf),
+                                missing_prop = input$missing_prop_tf
+                                
+  )
+  return(res)
+})
+
+output$cq_hist_tf= renderPlot({
+  cont_res_tf()$p.hist
+})
+
+output$cq_top_tf=renderPlot({
+  cont_res_tf()$p.top_genes
+})
+
+output$hmap_top_tf=renderPlot({
+  cont_res_tf()$hmap_top
+})
+
+
+## PANEL Progeny
+output$func_tb_pw_mm=DT::renderDataTable({
+  table_to_present<- df_func%>%
+    filter(database=="progeny", !grepl("hs", condition))%>%
+    mutate(FDR = scales::scientific(FDR, digits=3),
+           p_value= scales::scientific(p_value, 3), 
+           score= round(score, 2),
+           model= factor(model),
+           condition= factor(condition),
+           pathway= factor(source), 
+           modal = factor(ifelse(grepl("RNA", condition), "RNA", 
+                                 ifelse(grepl("ribo", condition), "Ribo", "Prot")))
+    )%>%
+    select(-statistic, -CellType, -score_sc, -source)%>%
+    select(condition, 
+           modal, model, pathway , everything())
+  
+  
+  make_nice_table(table_to_present, "score")
+  
+  
+})
+output$func_tb_pw_hs=DT::renderDataTable({
+  table_to_present <- df_func%>%
+    filter(database=="progeny", grepl("hs", condition))%>%
+    mutate(FDR = scales::scientific(FDR, digits=3),
+           p_value= scales::scientific(p_value, 3), 
+           score= round(score, 2),
+           #model= factor(model),
+           
+           condition= factor(condition),
+           pathway= factor(source), 
+           comparison = factor(sapply(str_split(condition, "_"), `[`, 2)),
+           modal = factor(sapply(str_split(condition, "_"), `[`, 3))
+           
+    )%>%
+    select(-statistic, -CellType, -score_sc, -source, -model)%>%
+    select(condition, comparison, 
+           modal, pathway , everything())
+  
+  # make a nice table to plot
+  make_nice_table(table_to_present, "score")
+  
+  
+})
+
 
 
 #### Custom Enrichment ####
@@ -899,16 +774,25 @@ gsea_res = eventReactive(input$submit, {
     
     p1= df %>% 
       ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
-      geom_col()+
+      geom_col(width= 0.4, color ="black") +
       scale_fill_manual(values = c("TRUE" = "#4D7298",
                                    "FALSE"="grey", 
                                    drop= FALSE))+
       coord_flip()+
       labs(x= "contrast ID", 
            y= "normalized enrichment score (NES)", 
-           fill = "FDR<0.05")
+           fill = "FDR<0.05")+
+      theme(panel.grid.major = element_line(color = "grey",
+                                            linewidth = 0.1,
+                                            linetype = 1),
+            panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+            panel.grid.minor = element_blank(),
+            axis.line = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10))
     
   } else if (ncol(gs()) == 2) {
+    
     list_gs = gs()%>%
       split(.$geneset) %>%
       map(pull, gene)
@@ -923,15 +807,23 @@ gsea_res = eventReactive(input$submit, {
     
     p1= df %>% 
       ggplot(., aes(x= cc, y= NES, fill = padj<0.05)) +
-      geom_col()+
       facet_grid(rows= vars(pathway))+
+      geom_col(width= 0.4, color ="black") +
       scale_fill_manual(values = c("TRUE" = "#4D7298",
                                    "FALSE"="grey", 
                                    drop= FALSE))+
       coord_flip()+
       labs(x= "contrast ID", 
            y= "normalized enrichment score (NES)", 
-           fill = "FDR<0.05")
+           fill = "FDR<0.05")+
+      theme(panel.grid.major = element_line(color = "grey",
+                                            linewidth = 0.1,
+                                            linetype = 1),
+            panel.border = element_rect(fill= NA, linewidth=1, color= "black"), 
+            panel.grid.minor = element_blank(),
+            axis.line = element_blank(),
+            axis.text = element_text(size= 11), 
+            axis.title = element_text(size= 10))
     
    
   }
@@ -941,7 +833,7 @@ df = df %>%
   dplyr::rename(geneset = pathway,
                 contrast_id = cc) %>%
     as_tibble() %>%
-    select(-leadingEdge) %>%
+    #select(-leadingEdge) %>%
     mutate(signature = input$signature_source)
   
   list(df = df, p = p1)
@@ -976,19 +868,13 @@ output$gsea_res_plots = renderPlot({
 # make gene contrast data accessible:
 output$mouse_hypertrophyDT = DT::renderDataTable( {
   
-  joint_contrast_df %>% 
-    filter( grepl(pattern = "Mm|Rn", contrast_id))%>%
-    mutate(model= factor(ifelse(grepl("tac", contrast_id), "tac", 
-                                ifelse(grepl("swim", contrast_id ),
-                                       "swim", 
-                                       "invitro")),levels= c("swim", "tac", "invitro")), 
-           modality = factor(ifelse(grepl("rna", contrast_id), "transcriptome", "translatome")), 
-           timepoint = factor(ifelse(grepl("2d", contrast_id), "2d", 
-                                     ifelse(grepl("2wk", contrast_id), "2wk","none" ))) )%>% 
-    select( model,modality, timepoint,gene, logFC, FDR)%>%
-    mutate(logFC = signif(logFC,3),
-           FDR = scientific(FDR)
+  joint_contrast_df%>%
+    filter(cc== "A")%>%
+    select( model,modal, timepoint,gene, logFC, FDR_mod)%>%
+    mutate(logFC = signif(logFC,1),
+           FDR = scientific(FDR_mod)
            ) %>%
+      select(-FDR_mod)%>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
@@ -1037,7 +923,7 @@ output$human_HCMDT = DT::renderDataTable({
     mutate(modality= factor(ifelse(grepl("bulk", contrast_id),"bulk", "single_cell")))%>%
     mutate(logFC = signif(logFC,3),
          FDR = scientific(FDR),
-         contrast_id = as_factor(contrast_id)) %>%
+         contrast_id = factor(contrast_id)) %>%
     select(modality, contrast_id, gene, logFC, FDR,sig)%>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                                  extensions = "Buttons", rownames = F,

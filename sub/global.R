@@ -42,7 +42,7 @@ directed_signature = readRDS("app_data/signature.rds")
 example_geneset = read_csv("app_data/multiple_geneset.csv", show_col_types = FALSE)
 
 #progeny:
-prog.res= readRDS("app_data/progeny_results_all.rds")
+#prog.res= readRDS("app_data/progeny_results_all.rds")
 
 #dorothea:
 #df_tf= readRDS("app_data/dorothea_results_all.rds")

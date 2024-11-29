@@ -292,8 +292,188 @@ get_top_consistent_gene2 <-
                 drugst_URL=drugst_URL
     ))
   }
+query_contrasts <- c("mm_TAC_RNA_2w")
+get_consistent_tfs <- function(df_func, 
+                               query_contrasts= c("mm_TAC_RNA_2w", 
+                                                  "hs_HCMvsNF_snRNA_CM",
+                                                  "hs_fetal_RNA", 
+                                                  "hs_HCMvsNF_RNA"),
+                               alpha= 0.05,
+                               #cutoff= 10,
+                               missing_prop= 1
+){
+  #reduce df to alpha level cut off & contrast id
+  contrast_df_filt= df_func %>% 
+    filter(condition %in% query_contrasts)%>%
+    filter(FDR< alpha, 
+           database =="collectri")%>%
+    group_by(source)%>%
+    mutate(mean.score = median(score, na.rm  = T))
+  
+  gene_counts = contrast_df_filt %>% 
+    distinct(source, condition)%>%
+    group_by(source)%>%
+    count()%>% arrange(desc(n))
+  
+  p.df <- gene_counts %>% 
+    ungroup()%>%
+    count(n)%>%
+    mutate(selected = ifelse(n >= missing_prop, "selected", "other"), 
+           n= factor(n, levels =  1:length(query_contrasts)))
+  
+  # if(max(p.df$n)< length(query_contrasts)){
+  #   rbind(p.df, c(length(query_contrasts), 0))
+  # }
+  
+  p.overlaps = p.df %>%
+    ggplot(aes(x = n, y= nn))+
+    geom_col(aes(fill = selected), 
+             color = "black" # Keep the fill white to emphasize the outline
+    ) +  # Adjust the binwidth as needed
+    scale_fill_manual(values = c("selected" = "#4D7298", "other" = "darkgrey")) +
+    theme_cowplot()+
+    geom_text(
+      aes(label = ifelse(selected=="selected", nn, ""), y = nn), 
+      vjust = -0.5,  # Positioning of the label above the bar
+      color = "darkred",  # Text color to match the highlighted bar
+      size = 4        # Adjust text size as needed
+    )+
+    theme(axis.line = element_blank())+
+    labs(x= "Number of contrasts", 
+         y= "Number of TFs",
+         fill= "")
+  p.overlaps
+  
+  ##### get the intersection genes by looking for gene with times the allowed NA
+  intersect_genes<- gene_counts %>% filter(n>= missing_prop)%>% pull(source)%>% unique()
+  
+  # assign whether genes are consistent in direction
+  df.msign= contrast_df_filt %>%
+    dplyr::select(source, condition, score)%>% 
+    filter(source %in% intersect_genes) %>%
+    group_by(source)%>% 
+    summarise(m.sign = mean(sign(score)))%>%
+    mutate(top_ = factor(ifelse(m.sign== 1, 
+                                "upregulated", 
+                                ifelse(m.sign ==-1 ,
+                                       "downregulated", 
+                                       "inconsistent")
+                                ),
+                         levels= c("upregulated", "inconsistent", "downregulated")
+                         )
+           )
+  
+  
+  
+  p.bar.intersect<- df.msign %>%
+    count(top_)%>%
+    ggplot(., aes(x = 1, y =n, fill = top_)) +
+    geom_col(color="black" )+
+    geom_text(aes(label = ifelse(n >= 1, n, "")), 
+              position = position_stack(vjust = 0.5), # Center the labels within the bars
+              color = "white") +
+    scale_fill_manual(values = c("upregulated" = "darkred", 
+                                 "inconsistent" = "darkgrey", 
+                                 "downregulated" = "darkblue"))+
+    theme_cowplot()+
+    theme(axis.text.x = element_blank(), 
+          axis.line = element_blank(), 
+          axis.ticks.x = element_blank())+
+    labs(x="", y="number of TFs", fill ="")
+  
+  # combine
+  p.int=  cowplot::plot_grid( p.overlaps,p.bar.intersect,
+                              ncol = 2, labels = c("A", 
+                                                   "B"), 
+                              rel_widths = c(2,1.2))
+  
+  tf_sets <- split(df.msign$source, df.msign$top_)
+  tf_sets_cons <- c(tf_sets$upregulated, tf_sets$downregulated)
+  
+  if(length(tf_sets_cons)!= 0){
+    
+    # we prioritize those genes that are covered by all contrasts
+    top_dn= contrast_df_filt%>% 
+      filter(source %in% tf_sets$downregulated)%>%
+      arrange((mean.score))%>%
+      pull(source)%>% unique()
+    
+    top_up= contrast_df_filt%>% 
+      filter(source %in% tf_sets$upregulated)%>%    
+      arrange(desc(mean.score))%>%
+      pull(source)%>% unique()
+    
+    p.top_genes<- contrast_df_filt%>%
+      filter(source %in% tf_sets_cons)%>%
+      ggplot(., 
+             aes(x= reorder(source,mean.score),  y= score))+
+      geom_boxplot(outlier.colour = NA, width = 0.4)+
+      geom_jitter(aes( color= condition), width= 0.2, size = 4)+
+      scale_color_manual(values= myColors_soft)+
+      theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
+      labs(x= "", color= "Contrast ID")+
+      geom_hline(yintercept = 0, color="darkgrey")
+    
+    ##add hmap
+    plot.genes= unique(c(top_dn, top_up))
+    
+    # now we select all genes that are not inconsistent
+    mat= contrast_df_filt %>% 
+      dplyr::select(condition, source,  score)%>%
+      filter(source %in% tf_sets_cons)%>%
+      pivot_wider(names_from = condition, values_from = score, values_fn = mean)%>%
+      as.data.frame()%>%
+      #filter(!is.na(gene))%>%
+      column_to_rownames("source")%>% 
+      as.matrix()
+    
+    mat<- mat[match( plot.genes, rownames(mat)),]
 
+    hmap_top <- ComplexHeatmap::Heatmap(t(mat),
+                                        #rect_gp = gpar(fill = "grey", lwd = 1),
+                                        name = "TF activity", 
+                                        na_col = "black",
+                                        border_gp = gpar(col = "black", lty = 1),
+                                        cluster_columns = F,
+                                        cluster_rows= F, 
+                                        row_names_centered = TRUE,
+                                        show_row_dend = F, 
+                                        #column_labels = labeled_genes,
+                                        column_names_gp = gpar(fontsize = 8),
+                                        row_names_side = "left",
+                                        row_dend_side = "left"
+                                        #clustering_distance_rows = "pearson",
+                                        #clustering_distance_columns = "pearson"
+    )
+    hmap_top
+    
+    gene_list= list("i"= intersect_genes, 
+                    "u"= top_up, 
+                    "d"= top_dn)
+    
+    
+  }else{ 
+    error_text2 <- "There are no genes to be plotted.\nYou can select
+        differnt contrasts or lower the number of required contrasts." 
+    p <- ggplot()+ 
+      annotate("text", x = 4, y = 25, size=6, label = error_text2)+
+      theme_void()
+    p.top_genes= p
+    hmap_top = p
+    gene_list= list()
+    drugst_URL=NULL
+  }
+  
+  return(list(p.hist=p.int,
+              tfs= tf_sets,
+              df= contrast_df_filt, 
+              p.top_genes= p.top_genes,
+              hmap_top= hmap_top
+  )
+  )
+}
 
+get_consistent_tfs(df_func, missing_prop= 1)
 #' plot contrast expression
 #' 
 #' @param joint_contrast_df dataframe to be plotted
@@ -363,7 +543,7 @@ plot_logfc_gene = function(red_contrast_df,
 # saveRDS(all_legends[[1]], "app_data/legend_for_lfc_plot.rds")
 
 make_colorful_facet_labels <- function(p1,
-                                        fills = c("#6457A6", "#EF767A","#FFE347","#23F0C7","yellow")
+                                        fills = c("#47E5BC", "#EF767A","#FFE347","#23F0C7","yellow")
                                         ){
   require(ggpubr)
   # this code is to make every facet label in a different color: 
@@ -509,7 +689,45 @@ generate_drugstone_url <- function(node_vec, identifier = "symbol", autofill_edg
   return(url)
 }
 
-
+make_nice_table <- function(df, color_column = NULL) {
+  
+  # Check if coloring is required
+  if (!is.null(color_column)) {
+    # Define breakpoints including 0
+    brks <- quantile(df[[color_column]], probs = seq(0, 1, 0.05), na.rm = TRUE)
+    brks <- unique(c(brks[brks < 0], 0, brks[brks > 0])) # Ensure 0 is included
+    
+    # Create a color palette
+    colors <- colorRampPalette(c("#ADD8E6", "white", "#FFB6C1"))(length(brks) + 1)
+  }
+  
+  # Create the datatable
+  datatable <- df %>%
+    DT::datatable(
+      escape = FALSE,
+      filter = "top",
+      selection = list(target = 'row+column'),
+      extensions = "Buttons",
+      rownames = FALSE,
+      options = list(
+        scrollX = TRUE,
+        autoWidth = TRUE,
+        dom = "Bfrtip",
+        buttons = c("copy", "csv", "excel")
+      )
+    )
+  
+  # Apply coloring if required
+  if (!is.null(color_column)) {
+    datatable <- datatable %>%
+      formatStyle(
+        color_column,
+        backgroundColor = styleInterval(brks, colors)
+      )
+  }
+  
+  return(datatable)
+}
 
 # wrappers  ---------------------------------------------------------------
 

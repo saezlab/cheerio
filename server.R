@@ -591,8 +591,8 @@ output$funcB_tf_tb_sc= DT::renderDataTable({
   df_tf$hs_sc%>%
     dplyr::select(-statistic)%>%
     mutate_if(is.character, as.factor) %>%
-    mutate(score = signif(score, 3),
-           p_value = scientific(p_value),
+    mutate(score = signif(score, 3)
+           #p_value = scientific(p_value)
     ) %>%
     dplyr::select(source, condition, celltype, everything())%>%
     DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
@@ -688,9 +688,7 @@ output$hmap_top_tf=renderPlot({
 output$func_tb_pw_mm=DT::renderDataTable({
   table_to_present<- df_func%>%
     filter(database=="progeny", !grepl("hs", condition))%>%
-    mutate(FDR = scales::scientific(FDR, digits=3),
-           p_value= scales::scientific(p_value, 3), 
-           score= round(score, 2),
+    mutate(score= round(score, 2),
            model= factor(model),
            condition= factor(condition),
            pathway= factor(source), 
@@ -702,15 +700,16 @@ output$func_tb_pw_mm=DT::renderDataTable({
            modal, model, pathway , everything())
   
   
-  make_nice_table(table_to_present, "score")
+  make_nice_table(table_to_present, "score")%>%
+    DT::formatSignif(columns = c("p_value", "FDR"), digits = 3)
   
   
 })
 output$func_tb_pw_hs=DT::renderDataTable({
   table_to_present <- df_func%>%
     filter(database=="progeny", grepl("hs", condition))%>%
-    mutate(FDR = scales::scientific(FDR, digits=3),
-           p_value= scales::scientific(p_value, 3), 
+    mutate(#FDR = scales::scientific(FDR, digits=3),
+           #p_value= scales::scientific(p_value, 3), 
            score= round(score, 2),
            #model= factor(model),
            
@@ -725,7 +724,8 @@ output$func_tb_pw_hs=DT::renderDataTable({
            modal, pathway , everything())
   
   # make a nice table to plot
-  make_nice_table(table_to_present, "score")
+  make_nice_table(table_to_present, "score")%>%
+    DT::formatSignif(columns = c("p_value", "FDR"), digits = 3)
   
   
 })
@@ -757,8 +757,8 @@ signature = reactive({
          )
 })
 #for trouble shooting:
-sig = joint_contrast_df %>% filter(cc == "A")
-gss = example_geneset
+# sig = joint_contrast_df %>% filter(cc == "A")
+# gss = example_geneset
 
 # perform GSEA with plotting
 gsea_res = eventReactive(input$submit, {
@@ -846,15 +846,16 @@ output$gsea_res_table = DT::renderDataTable({
     mutate(NES = signif(NES, 3),
            ES = signif(ES, 3),
            geneset= factor(geneset), 
-           contrast_id = factor(contrast_id), 
-           pval = scales::scientific(pval),
-           padj = scales::scientific(padj)) %>%
+           contrast_id = factor(contrast_id))%>%
+           # pval = scientific(pval),
+           # padj = scientific(padj)) %>%
     DT::datatable(escape=F, filter = "top", selection = list(target = "column"),
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
                                 autoWidth = T, 
                                 dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+                                buttons = c("copy", "csv", "excel")))%>%
+    DT::formatSignif(columns = c("pval", "padj"), digits = 3)
 })
 
 # gsea results as plots
@@ -873,7 +874,7 @@ output$mouse_hypertrophyDT = DT::renderDataTable( {
     filter(cc== "A")%>%
     select( model,modal, timepoint,gene, logFC, FDR_mod)%>%
     mutate(logFC = signif(logFC,1),
-           FDR = scientific(FDR_mod)
+           FDR = FDR_mod
            ) %>%
       select(-FDR_mod)%>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
@@ -881,7 +882,8 @@ output$mouse_hypertrophyDT = DT::renderDataTable( {
                   option = list(scrollX = T, 
                                 autoWidth = T, 
                                 dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+                                buttons = c("copy", "csv", "excel")))%>%
+    DT::formatSignif(columns = c("FDR"), digits = 3)
   
 })
 
@@ -890,14 +892,14 @@ output$human_HF_bulk_summDT = DT::renderDataTable({
   
   ranks %>%
     mutate(mean_lfc = signif(mean_lfc,3),
-           mean_t = signif(mean_t,3),
-           fisher_pvalue = scientific(fisher_pvalue)) %>%
+           mean_t = signif(mean_t,3)) %>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
                                 autoWidth = T,
                                 dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+                                buttons = c("copy", "csv", "excel")))%>%
+  DT::formatSignif(columns = c("fisher_pvalue"), digits = 3)
   })
 
 output$human_fetalDT = DT::renderDataTable({
@@ -905,14 +907,15 @@ output$human_fetalDT = DT::renderDataTable({
     select(contrast_id, gene, logFC, FDR,sig)%>%
     filter(grepl("fetal", contrast_id))%>%
     mutate(logFC = signif(logFC,3),
-           FDR = scientific(FDR),
+           #FDR = scientific(FDR),
            contrast_id = factor(contrast_id)) %>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
                                 autoWidth = T,
                                 dom = "Bfrtip",
-                                buttons = c("copy", "csv", "excel")))
+                                buttons = c("copy", "csv", "excel")))%>%
+    DT::formatSignif(columns = c("FDR"), digits = 3)
   
   
 })
@@ -923,7 +926,7 @@ output$human_HCMDT = DT::renderDataTable({
     filter(grepl(pattern="HCM", contrast_id) )%>%
     #mutate(modality= factor(ifelse(grepl("bulk", contrast_id),"bulk", "single_cell")))%>%
     mutate(logFC = signif(logFC,3),
-         FDR = scientific(FDR),
+         #FDR = scientific(FDR),
          contrast_id = factor(contrast_id)) %>%
     mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
            Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
@@ -935,7 +938,8 @@ output$human_HCMDT = DT::renderDataTable({
                                  option = list(scrollX = T,
                                                autoWidth = T,
                                                dom = "Bfrtip",
-                                               buttons = c("copy", "csv", "excel")))
+                                               buttons = c("copy", "csv", "excel")))%>%
+    DT::formatSignif(columns = c("FDR"), digits = 3)
     
 
 })

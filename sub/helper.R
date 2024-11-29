@@ -349,7 +349,6 @@ get_consistent_tfs <- function(df_func,
     labs(x= "Number of contrasts", 
          y= "Number of TFs",
          fill= "")
-  p.overlaps
   
   ##### get the intersection genes by looking for gene with times the allowed NA
   intersect_genes<- gene_counts %>% filter(n>= missing_prop)%>% pull(source)%>% unique()
@@ -452,7 +451,6 @@ get_consistent_tfs <- function(df_func,
                                         #clustering_distance_rows = "pearson",
                                         #clustering_distance_columns = "pearson"
     )
-    hmap_top
     
     gene_list= list("i"= intersect_genes, 
                     "u"= top_up, 

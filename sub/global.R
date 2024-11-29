@@ -71,8 +71,8 @@ hcm_contrasts<- c("hs_HCMvsNF_RNA",
 
 # app stuff ---------------------------------------------------------------
 legend_lfc_plot= readRDS("app_data/legend_for_lfc_plot.rds")
-error_text = "Queried gene(s) were not captured\nin data"
 
+error_text = "Queried gene(s) were not captured\nin data"
 
 myColors1 <- c("grey", "#4E5D6C",  # Stronger blue-gray
               "#6A7F8A",  # Deep teal-gray

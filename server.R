@@ -632,7 +632,7 @@ output$funcD_tf= renderPlot({
 
 hide("loading-content", TRUE, "fade")
 
-## PANEL QUERY TFs
+## PANEL QUERY CONTRASTS
 observeEvent(input$reset_input_contrasts_tf, {
   updatePickerInput(session,
                     inputId = "select_contrast_hs_tf", selected = character(0)
@@ -663,6 +663,7 @@ cont_res_tf = eventReactive(input$submit_contrast_tf, {
                                                     input$select_contrast_hs_tf,
                                                     input$select_contrast_hs2_tf),
                                 #cutoff = input$cut_off_tfs,
+                                use_FDR= input$use_FDR_for_TFs, 
                                 alpha= as.numeric(input$select_alpha_tf),
                                 missing_prop = input$missing_prop_tf
                                 
@@ -905,7 +906,7 @@ output$human_fetalDT = DT::renderDataTable({
     filter(grepl("fetal", contrast_id))%>%
     mutate(logFC = signif(logFC,3),
            FDR = scientific(FDR),
-           contrast_id = as_factor(contrast_id)) %>%
+           contrast_id = factor(contrast_id)) %>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
@@ -918,13 +919,17 @@ output$human_fetalDT = DT::renderDataTable({
 
 output$human_HCMDT = DT::renderDataTable({
   
-  joint_contrast_df%>% 
+  df<- joint_contrast_df%>% 
     filter(grepl(pattern="HCM", contrast_id) )%>%
-    mutate(modality= factor(ifelse(grepl("bulk", contrast_id),"bulk", "single_cell")))%>%
+    #mutate(modality= factor(ifelse(grepl("bulk", contrast_id),"bulk", "single_cell")))%>%
     mutate(logFC = signif(logFC,3),
          FDR = scientific(FDR),
          contrast_id = factor(contrast_id)) %>%
-    select(modality, contrast_id, gene, logFC, FDR,sig)%>%
+    mutate(CellType= factor(str_extract(contrast_id, "(?<=_)[^_]+$")), 
+           Comparison = factor(sapply(str_split(contrast_id, "_"), `[`, 2),
+                               levels= c( "HCMvsNF","HCMvsDCM")
+           ))%>%
+    select(contrast_id, modal, CellType,Comparison, gene, logFC, FDR,sig)%>%
     DT::datatable(escape=F, filter = "top", selection = "multiple",
                                  extensions = "Buttons", rownames = F,
                                  option = list(scrollX = T,

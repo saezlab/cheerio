@@ -292,20 +292,27 @@ get_top_consistent_gene2 <-
                 drugst_URL=drugst_URL
     ))
   }
-query_contrasts <- c("mm_TAC_RNA_2w")
+#query_contrasts <- c("mm_TAC_RNA_2w")
 get_consistent_tfs <- function(df_func, 
                                query_contrasts= c("mm_TAC_RNA_2w", 
                                                   "hs_HCMvsNF_snRNA_CM",
                                                   "hs_fetal_RNA", 
                                                   "hs_HCMvsNF_RNA"),
                                alpha= 0.05,
+                               use_FDR = F, 
                                #cutoff= 10,
                                missing_prop= 1
 ){
   #reduce df to alpha level cut off & contrast id
+  if(use_FDR){
+    column_p <- "FDR"
+  }else{
+    column_p <- "p_value"
+  }
+  
   contrast_df_filt= df_func %>% 
     filter(condition %in% query_contrasts)%>%
-    filter(FDR< alpha, 
+    filter(.data[[column_p]] < alpha, 
            database =="collectri")%>%
     group_by(source)%>%
     mutate(mean.score = median(score, na.rm  = T))

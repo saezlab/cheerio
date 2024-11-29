@@ -278,12 +278,6 @@ tabPanel(
   )
 ),
 
-## old, used drugst.one intersect
-# tabPanel(
-#   title = "Test drugst.one",
-#   icon = icon("chart-line"),
-#   HTML( "<drugst-one id='drugstone-component-id'></drugst-one>")
-# ),
       
       #### Functional analysis ####
 tabPanel(
@@ -382,14 +376,20 @@ tabPanel(
                      #br(),
                      hr(),
                      pickerInput(inputId = "select_alpha_tf", 
-                                 label = "2. Select alpha for FDR cut off:",
+                                 label = "2.1 Select alpha level:",
                                  choices = c(0.0001, 0.001, 0.01, 0.05, 0.1, 0.2), 
                                  multiple = F,
                                  options = list(`live-search` = TRUE,
                                                 size=10, `max-options` = 10),
                                  selected = 0.05
                      ),
-                     
+                     br(),
+                     strong("2.2 Use multiple hypothesis correction?"), 
+                    
+                     switchInput(inputId = "use_FDR_for_TFs",
+                                 onLabel = "Yes", offLabel = "No", value=T, 
+                                 size= "mini"),
+                     p("Caution! Not using FDR correction will produce more false positive results and should only be used for hypothesis generation!"), 
                      # sliderInput("cut_off_tfs", "3. Select number of TFs to plot:",
                      #             min = 1, max = 70,
                      #             value = 10, step= 1),

@@ -15,14 +15,14 @@
 
 library(tidyverse)
 library(biomaRt)
-library(limma)
-library(edgeR)
-library(ggrepel)
+#library(limma)
+#library(edgeR)
+#library(ggrepel)
 
-
-gc= read.csv("raw_data/magnet/gene_count_matrix.csv")
+pw<- "~/R-projects/Collaborations/cheerio/"
+gc= read.csv(paste0(pw, "../cheerio_data/raw_data/magnet/gene_count_matrix.csv"))
 #tc= read.csv("data/raw_data/magnet/transcript_count_matrix.csv")
-meta= read.csv("raw_data/magnet/MAGE_metadata.txt")
+meta= read.csv(paste0(pw,"../cheerio_data/raw_data/magnet/MAGE_metadata.txt"))
 
 meta$Sample.Name
 colnames(gc)
@@ -40,8 +40,6 @@ foo <- getBM(attributes=c('ensembl_gene_id',
              filters = 'ensembl_gene_id',
              values = gc$gene_id,
              mart = hs)
-hs <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-
 
 
 
@@ -65,7 +63,9 @@ meta= meta %>% arrange(Sample.Name)
 colnames(df)[match( colnames(df), meta$Run,)]
 
 meta= meta %>% filter(Run %in% colnames(df), 
-                      etiology %in% c("Non-Failing Donor", "Hypertrophic cardiomyopathy (HCM)" , "Dilated cardiomyopathy (DCM)")
+                      etiology %in% c("Non-Failing Donor",
+                                      "Hypertrophic cardiomyopathy (HCM)" ,
+                                      "Dilated cardiomyopathy (DCM)")
                       )%>%
   as_tibble()
 
@@ -163,3 +163,27 @@ map(tble.list, function(x){
 })
 
 saveRDS(tble.list, "raw_data/magnet/contrast_list.rds")
+
+
+tble.list <- readRDS("../cheerio_data/raw_data/magnet/contrast_list.rds")
+
+x <-readRDS("~/Downloads/CPMS_SVA_corrected.RDS")
+
+boxplot(log10(x[, 1:10]))
+
+
+
+unique(meta$etiology)
+dge<- DGEList(counts=log2(x+1), group= meta$etiology)#, group=group)
+
+#detect and remove low expressed gene
+keep <- filterByExpr(dge, min.count	= 15, min.total.count= 20, min.prop = 0.75)
+table(keep)
+
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+
+dge <- calcNormFactors(dge)
+
+# use limma voom to transform count data to log2 counts per million
+v <- voom(dge, plot=TRUE)
+

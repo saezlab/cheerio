@@ -40,18 +40,46 @@ msig_res= decoupleR::run_ulm(mat = pca.mat, net= C2,.source = gs_name, .target =
 
 write.csv(msig_res, "data/misg_enriched_in_pca_loadings.csv")
 
-pways= msig_res_hm %>%
+pways <- msig_res_hm %>%
   filter(statistic=="ulm") %>%
   #filter(condition=="PC1")%>%
   mutate(p_adj= p.adjust(p_value))%>%
   group_by(condition, source)%>%
-  filter(any(p_adj<0.2))%>%
+  filter(any(p_adj<0.05))%>%
   pull(source
   )
-msig_res_hm%>% 
-  filter(grepl("INFL", source))
+
 px= msig_res_hm %>% 
 #  filter(condition=="PC1")%>%
+  mutate(p_adj= p.adjust(p_value)) %>%
+  filter(source %in% pways)%>%
+  mutate(source= str_replace_all(source, "HALLMARK_", ""))%>%
+  ggplot(aes(x=score, y= reorder(source,score), fill = condition))+
+  facet_grid(~ condition)+
+  geom_col(aes(color= p_adj<0.05), fill = "darkgrey", width= 0.7)+
+  scale_color_manual(values= c("TRUE"= "black", "FALSE"= "white"))+
+  theme_cowplot()+
+  theme(axis.text.y = element_text(size=10), 
+        legend.position = "none")+
+  geom_vline(xintercept = 0)+
+  labs(x="Enrichment score", y="")
+px
+
+pdf("figures/pca_small_es.pdf ",width= 7, height= 4)
+px
+dev.off()
+
+pways= msig_res %>%
+  filter(statistic=="ulm") %>%
+  #filter(condition=="PC1")%>%
+  mutate(p_adj= p.adjust(p_value))%>%
+  group_by(condition, source)%>%
+  filter(any(p_adj<0.00001))%>%
+  pull(source
+  )
+
+msig_res %>% 
+  #  filter(condition=="PC1")%>%
   mutate(p_adj= p.adjust(p_value)) %>%
   filter(source %in% pways)%>%
   mutate(source= str_replace_all(source, "HALLMARK_", ""))%>%
@@ -64,11 +92,7 @@ px= msig_res_hm %>%
         legend.position = "none")+
   geom_vline(xintercept = 0)+
   labs(x="Enrichment score", y="")
-px
-pdf("figures/pc1_small_es.pdf ",width= 5, height= 2.2)
-px
-dev.off()
-
+plot_grid(res_pca[[3]], px)
 # 
 # 
 # pdf("plots/big_pc_hmap.pdf_2",width= 20, height= 15)

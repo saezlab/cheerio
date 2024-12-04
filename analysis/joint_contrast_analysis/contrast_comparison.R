@@ -9,14 +9,17 @@
 ## Purpose of script:
 ##
 ## breakdown programs
+
 library(tidyverse)
 library(cowplot)
 library(lsa)
 library(ComplexHeatmap)
 library(circlize)
 library(ggrepel)
+library(ggdendro)
 
-c.df= readRDS("data/contrasts_query_df_translated3.rds")
+c.df= readRDS("app_data/contrasts_query_df_translated3.rds")
+source("sub/global.R")
 
 c.df$contrast_id%>% unique()%>%
   write.csv("data/contrast_ids.csv")
@@ -37,7 +40,8 @@ get_boxplot_from_matrix<- function(mtx){
     theme(axis.text.x = element_text(angle= 90, vjust= 0.5, hjust= 1))+
     labs(x= "")
 }
-contrast_oi<- contrast_mm 
+contrast_oi<- contrast_cs
+
 unsupervised_wrapper<- function(c.df, 
                                 contrast_oi){
   wide_lfc= c.df %>%
@@ -61,13 +65,13 @@ unsupervised_wrapper<- function(c.df,
   
   d= cosine((wide_lfc))
   cl= hclust(as.dist(1-d))
-  plot(cl, main = "", xlab = "")
+  #plot(cl, main = "", xlab = "")
   
   # Perform hierarchical clustering
   hc <- hclust(as.dist(1 - d))
   
   # Convert clustering to a dendrogram object
-  dendro_data <- dendro_data(as.dendrogram(hc))
+  dendro_data <- ggdendro::dendro_data(as.dendrogram(hc))
   
   # Plot using ggplot2
   p.dend<- ggplot(segment(dendro_data)) +
@@ -84,48 +88,172 @@ unsupervised_wrapper<- function(c.df,
           plot.margin = margin(20, 20, 120, 20, "pt"),
           panel.border = element_blank())+
     coord_cartesian(clip = 'off') # Remove x-axis ticks
+  
+  print(p.dend)
   ## correlation
-  
+  #calc the corr
   d= cor(wide_lfc, method = "pearson")
-  col_fun = colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
+  hc2 <- hclust(as.dist(1 - d))
+  plot(hc2)
+  # Custom distance function for clustering
+  dist_function = function(x) as.dist(1 - x)
   
-  corr.hmap= ComplexHeatmap::Heatmap(d,row_dend_side = "right", show_column_dend = T,show_row_dend= F, row_names_side = "left",
+  # aesthetics
+  # filling
+  col_fun = colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
+  # labels
+  cc_colors <- c("A" = "#20558c",
+                 "B" = "#ff8708",
+                 "C" = "#a8629d",
+                 "D" = "#0c9659")
+  modal_colors <- c("transcriptome" = "#FFA07A", "proteome" = "#20B2AA", "translatome" = "#FFD700") # 3 levels
+  model_colors <- c("pathologic" = "#20558c", "physiologic" = "#FFD700", "NA"= "grey")   # 2 levels + NA
+  species_colors <- c("Hs" = "#ff8708", "Rn" = "#d62f2f", "Mm" = "#0c9659")        # 3 species
+  
+  label_colors <- c.df %>%
+    distinct(contrast_id, cc, model, modal) %>%
+    arrange(cc, contrast_id)%>%
+    mutate(color = cc_colors[as.character(cc)], 
+           species= str_to_title(substr(contrast_id, 1, 2)),
+           hypertrophy= "pathologic",
+           hypertrophy= ifelse(cc %in% c("C", "D"), NA, hypertrophy),
+           hypertrophy = ifelse(grepl("swim",contrast_id), "physiologic", hypertrophy),
+           )
+
+  # Create named vectors for each annotation variable
+  contrast_colors <- setNames(label_colors$color, label_colors$contrast_id)
+  
+  row_colors <- contrast_colors[rownames(d)]
+  column_colors <- contrast_colors[colnames(d)]
+  
+  column_cc_vector <- setNames(label_colors$cc, label_colors$contrast_id)
+  column_modal_vector <- setNames(label_colors$modal, label_colors$contrast_id)
+  column_model_vector <- setNames(label_colors$hypertrophy, label_colors$contrast_id)
+  column_species_vector <- setNames(label_colors$species, label_colors$contrast_id)
+  
+  # Match the order of the column names in the heatmap matrix
+  column_cc_data <- column_cc_vector[colnames(d)]
+  column_modal_data <- column_modal_vector[colnames(d)]
+  column_model_data <- column_model_vector[colnames(d)]
+  column_species_data <- column_species_vector[colnames(d)]
+  
+  # Define the column annotation
+  column_annotation <- HeatmapAnnotation(
+    Category = column_cc_data,       # CC annotation
+    Modality = column_modal_data, # Modal annotation
+    Hypertrophy = column_model_data, # Model annotation
+    Species = column_species_data, # Species annotation
+    col = list(
+      Category = cc_colors,
+      Modality = modal_colors,
+      Hypertrophy = model_colors,
+      Species = species_colors
+    ),
+    show_legend = F
+    # annotation_legend_param = list(
+    #   title_gp = gpar(fontsize = 10, fontface = "bold"),  # Styling for legend titles
+    #   grid_height = unit(5, "mm")  # Height of the legend grids
+    # )
+  )
+  corr.hmap= ComplexHeatmap::Heatmap(d,
+                                     row_dend_side = "right",
+                                     show_column_dend = T,
+                                     show_row_dend= F, 
+                                     row_names_side = "left",
                                      name = "Pearson's\ncorrelation",
                                      col= col_fun, 
+                                     cluster_rows = hclust(dist_function(d)),  # Custom row clustering
+                                     cluster_columns = hclust(dist_function(t(d))),
+                                     clustering_method_columns = "average", 
+                                     clustering_method_rows =  "average",
                                      column_names_max_height= unit(20, "cm"),
                                      row_names_max_width= unit(10, "cm"),
                                      column_dend_height = unit(40, "mm"),
                                      column_names_side = "top",
                                      border = TRUE,
+                                     show_heatmap_legend = F,
                                      border_gp = gpar(col = "black"),
                                      #rect_gp = gpar(col = "#303030", lwd = 2,size=2)  # Set the border color
-                                     rect_gp = gpar(col = "white", lwd = 1)  # Set the border color
-  )
+                                     rect_gp = gpar(col = "white", lwd = 1),   # Set the border color
+                                     #row_names_gp = gpar(col = row_colors),    # Apply colors to row names
+                                     #column_names_gp = gpar(col = column_colors), # Apply colors to column names
+                                     ##annotations:
+                                     top_annotation = column_annotation 
+  
+                                                 )
+  
   print(corr.hmap)
   print(dim(wide_lfc))
+  # Pearson correlation legend
+  heatmap_legend = Legend(
+    title = "Pearson's\ncorrelation",
+    col_fun = col_fun,
+    grid_width = unit(5, "mm"),
+    grid_height = unit(20, "mm")
+  )
+  
+  # CC category legend
+  cc_legend = Legend(
+    labels = names(cc_colors),  # The labels for the legend
+    legend_gp = gpar(fill = cc_colors),  # Colors for the legend dots
+    title = "Data\ncategory",
+    grid_width = unit(5, "mm"),
+    grid_height = unit(5, "mm")
+  )
+  
+  # Modal legend
+  modal_legend = Legend(
+    labels = names(modal_colors),
+    legend_gp = gpar(fill = modal_colors),
+    title = "Modality",
+    grid_width = unit(5, "mm"),
+    grid_height = unit(5, "mm")
+  )
+  
+  # Model legend
+  model_legend = Legend(
+    labels = names(model_colors),
+    legend_gp = gpar(fill = model_colors),
+    title = "Hypertrophy",
+    grid_width = unit(5, "mm"),
+    grid_height = unit(5, "mm")
+  )
+  
+  # Species legend
+  species_legend = Legend(
+    labels = names(species_colors),
+    legend_gp = gpar(fill = species_colors),
+    title = "Species",
+    grid_width = unit(5, "mm"),
+    grid_height = unit(5, "mm")
+  )
+  
+  # Combine all legends
+  combined_legend = packLegend(
+    heatmap_legend,
+    cc_legend,
+    modal_legend,
+    model_legend,
+    species_legend,
+    direction = "vertical",  # Arrange legends vertically
+    gap = unit(5, "mm")      # Space between legends
+  )
+  # Draw the heatmap with adjusted legend placement
+  p.hmap<- draw(corr.hmap, annotation_legend_list = combined_legend, 
+       annotation_legend_side = "left" )
+  # Draw the heatmap with the stacked legends
+  
   
   return(list("lfc_mtx"= wide_lfc, 
               "p.den"= p.dend, 
-              "p.hmap"= corr.hmap)
+              "p.hmap"= p.hmap,
+              "corr.matrix"= d)
          )
 }
 
 ## define contrasts of interest
 
 ## MAIN CONTRAST
-contrast_hyp2 <- c.df %>%
-  filter(!grepl("snR|swim|HCMvsDCM|2d|DCMvsNF|hs", contrast_id)) %>%
-  #filter(grepl("mm_TAC", contrast_id)) %>%
-  pull(contrast_id)%>% unique()
-# 
-contrast_hyp2 = c(contrast_hyp2, "hs_HCMvsNF_snRNA_CM", 
-                  "hs_HCMvsNF_RNA")
-
-##MAON CONTRAST no proteomes
-contrast_hyp <- contrast_hyp2[!grepl("prot", contrast_hyp2)]
-
-# compare all proteomics data:
-contrast_prot <- unique(c.df$contrast_id[grepl("prot", c.df$contrast_id)])
 
 #compare all animal models
 contrast_mm <- unique(c.df$contrast_id[grepl("mm|rn", c.df$contrast_id)])
@@ -133,77 +261,57 @@ contrast_mm <- unique(c.df$contrast_id[grepl("mm|rn", c.df$contrast_id)])
 ## cross species
 contrast_cs <- c.df %>%
   #filter(!grepl("prot|snR", contrast_id)) %>%
-  filter(!grepl("snR", contrast_id)) %>%
   filter(!grepl("snR", contrast_id) | grepl("HCMvsNF_snRNA_CM", contrast_id)) %>%
+  #filter(!grepl("HCMvsDCM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 contrast_cs
 
 cs_res <- unsupervised_wrapper(c.df,contrast_cs )
+
+#save correlation results:
+cs_res$corr.matrix%>% 
+  as.data.frame()%>%
+  rownames_to_column("comparison")%>%
+  write_csv("analysis/joint_contrast_analysis/correlation_matrix_all.csv")
 dim(cs_res$lfc_mtx)
+
 pdf("figures/corr_hmap_cross_species.pdf",
-    width= 7, height= 7.5)
-cs_res$p.hmap
+    width= 8.2, height= 8.5)
+  cs_res$p.hmap
 dev.off()
 
-#### RUN 
-mm_res <- unsupervised_wrapper(c.df,contrast_mm )
-dim(mm_res$lfc_mtx)
-pdf("figures/corr_hmap_animal.pdf",
-    width= 5, height= 6)
-  mm_res$p.hmap
-dev.off()
-
-cor.test(mm_res$lfc_mtx[,"Mm_swim_prot_2wk"], mm_res$lfc_mtx[,"Mm_tac_prot_2wk"])
-
-#compare all human data
-contrast_hs <- c.df %>%
-  #filter(!grepl("prot|snR", contrast_id)) %>%
-  filter(grepl("hs", contrast_id)) %>%
-  filter(!grepl("snR|HCMvsDCM", contrast_id))%>%
-  pull(contrast_id)%>% unique()
-contrast_hs
-contrast_hs <- unique(c.df$contrast_id[grepl("hs", c.df$contrast_id)])
-
-hs_res <- unsupervised_wrapper(c.df,contrast_hs )
-dim(hs_res$lfc_mtx)
-pdf("figures/corr_hmap_hs.pdf",
-    width= 5, height= 6)
-hs_res$p.hmap
-dev.off()
-
-
-
+## no pro
 contrast_cm <- c.df %>%
-  filter(!grepl("prot|snR|ribo|HFvsNF", contrast_id)) %>%
+  #filter(!grepl("prot|snR|ribo|HFvsNF|HCMvsDCM", contrast_id)) %>%
+  filter(!grepl("prot|snR|HCMvsDCM", contrast_id)) %>%
   #filter(grepl("mm_TAC", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 contrast_cm
 contrast_cm = c(contrast_cm, "hs_HCMvsNF_snRNA_CM")
 cm_res <- unsupervised_wrapper(c.df,contrast_cm )
 
-# PCA  --------------------------------------------------------------------
-cm_res_scaled = t(scale((cm_res$lfc_mtx), center=T, scale = T))
+cm_res$corr.matrix%>% 
+  as.data.frame()%>%
+  rownames_to_column("comparison")%>%
+  write_csv("analysis/joint_contrast_analysis/correlation_matrix_noprot.csv")
 
-p1<- get_boxplot_from_matrix(cm_res$lfc_mtx)
-p2<- get_boxplot_from_matrix(t(cm_res_scaled))
-p.lfc<-cowplot::plot_grid(p1+labs(y= "log2FC"), p2+labs(y = "scaled log2FC"), align ="h")
-
-pdf("figures/scale_logfc.pdf",
-    width= 6, height= 5)
-p.lfc
+pdf("figures/corr_hmap_noprot.pdf",
+    width= 8, height= 8)
+cm_res$p.hmap
 dev.off()
 
-PCA= prcomp((cm_res_scaled), center = F, scale. =F)
-#PCA= prcomp(t(cm_res), center = T, scale. =T)
+## only patho
+contrast_patho<- contrast_cm[!grepl( "swim", contrast_cm)]
 
-p.df= PCA$x %>% 
+cm_res2 <- unsupervised_wrapper(c.df,contrast_patho )
+cm_res2$p.hmap
+cm_res2$corr.matrix%>% 
   as.data.frame()%>%
-  rownames_to_column("c.id")%>%
-  as_tibble()%>% 
-  mutate(species= ifelse(grepl("hs", c.id), "human", "animal"))
-p.df
-
-plot_pca= function(p.df, 
+  rownames_to_column("comparison")%>%
+  write_csv("analysis/joint_contrast_analysis/correlation_matrix_onlypatho.csv")
+# PCA  --------------------------------------------------------------------
+plot_pca= function(p.df2,
+                   PCAres, 
                    pc_x= 1, 
                    pc_y= 2){
   require(ggrepel)
@@ -213,62 +321,83 @@ plot_pca= function(p.df,
   y_col= paste0("PC", pc_y)
   my_palette <- c("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
                   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
-  
-  p.df %>% 
+
+  p.df2 %>% 
+    mutate(hypertophy= ifelse(is.na(hypertophy), "NA", hypertophy))%>%
     ggplot(aes(x = !!rlang::ensym(x_col),
                y = !!rlang::ensym(y_col), 
-               shape= species, 
-               color= c.id,
-               label = c.id))+
+               shape= hypertophy, 
+               color= species,
+               label = contrast_id))+
     #geom_text(alpha= 0.6, color="black")+
     geom_text_repel(alpha= 0.6, force_pull = 0.01)+
     geom_point(size= 3)+
     theme_cowplot()+
-    scale_color_manual(values= my_palette)+
+    scale_color_manual(values=  c("Hs" = "#ff8708", "Rn" = "#d62f2f", "Mm" = "#0c9659")   )+
     #scale_color_brewer(type="qual", palette=2)+
     theme(axis.line = element_blank())+
-    labs(x= paste0(x_col, " (",as.character(round(PCA$sdev[pc_x]^2/sum(PCA$sdev^2)*100)),"%)"),
-         y= paste(y_col, " (",as.character(round(PCA$sdev[pc_y]^2/sum(PCA$sdev^2)*100)),"%)"),
-         color= "contrast ID")+
+    labs(x= paste0(x_col, " (",as.character(round(PCAres$sdev[pc_x]^2/sum(PCAres$sdev^2)*100)),"%)"),
+         y= paste(y_col, " (",as.character(round(PCAres$sdev[pc_y]^2/sum(PCAres$sdev^2)*100)),"%)"),
+         color= "Species",
+         shape= "Hypertrophy")+
     ggtitle(paste0(""))+
     theme( panel.border = element_rect(colour = "black", fill=NA, size=1))
 }
 
-p1= plot_pca(p.df, 1,2)
-p2= plot_pca(p.df, 3,4)
-p1
-pdf("figures/PCA.pdf",
-    width= 6, height= 4)
-p1
+pca_wrap<- function(c_output){
+  cm_res_scaled = t(scale((c_output$lfc_mtx), center=T, scale = T))
+  dim(cm_res_scaled)
+  p1<- get_boxplot_from_matrix(c_output$lfc_mtx)
+  p2<- get_boxplot_from_matrix(t(cm_res_scaled))
+  p.lfc<-cowplot::plot_grid(p1+labs(y= "log2FC"), p2+labs(y = "scaled log2FC"), align ="h")
+  p.lfc
+  
+  
+  PCA= prcomp((cm_res_scaled), center = T, scale. =T)
+  #PCA= prcomp(t(cm_res), center = T, scale. =T)
+  
+  p.df= PCA$x %>% 
+    as.data.frame()%>%
+    rownames_to_column("contrast_id")%>%
+    as_tibble()%>% 
+    #mutate(species= ifelse(grepl("hs", contrast_id), "human", "animal"))%>%
+    left_join(label_colors, by= "contrast_id")
+  p1= plot_pca(p.df2 = p.df,PCA, 1,2)
+  p2= plot_pca(p.df,PCA, 3,4)
+  
+  list(PCA, 
+       p.lfc,
+       p.df, 
+       p1+ ggtitle(dim(cm_res_scaled)[2]))
+       #p2)
+}
+c_output <- cm_res
+pca_res<- pca_wrap(cm_res)
+pca_res
+
+pdf("figures/pca_scale_logfc.pdf",
+    width= 6, height= 5)
+pca_res[[2]]
 dev.off()
 
-p2
-legend <- get_legend(
-  # create some space to the left of the legend
-  p1 + theme(legend.box.margin = margin(0, 0, 0, 12))
-)
-
-plot_grid(p1+theme(legend.position = "none"),
-          p2+theme(legend.position = "none"),
-          nrow= 1,
-          legend)
-
-p3= plot_pca(p.df, 5,6)
-
-pdf("plots/plot_PCA_contrasts12.pdf",
-    width= 8, height= 5)
-p1
+pdf("figures/pca_plot.pdf",
+    width= 5, height= 4)
+pca_res[[4]]
 dev.off()
+
 
 ##screeplot
-expl_var<-map(PCA$sdev, function(x){
+expl_var<-map(pca_res[[1]]$sdev, function(x){
   round(x^2/sum(PCA$sdev^2)*100, 3)
 })%>% unlist()
 
 names(expl_var)= paste0("PC ", 1:length(expl_var))
 p.scree<-enframe(expl_var)%>%
+  mutate(name= factor(name, levels=paste0("PC ", 1:length(expl_var))))%>%
   ggplot(aes(x= name, y= value))+
-  geom_col(width = 0.7)+
+  geom_col(width = 0.7, 
+           fill ="grey", 
+           color= "black")+
   theme_cowplot()+
   labs(x="", y= "Explained variance (%)")+
   theme(axis.text.x = element_text(angle= 90, hjust = 0, vjust = 0.5))
@@ -283,11 +412,49 @@ dev.off()
 ## and species on PC2 negative is mouse
 ## Q which are the genes that are species independent on pathologic hypertrophy
 
-p.pcaloadings= PCA$rotation[,1:9] %>% 
+p.pcaloadings= pca_res[[1]]$rotation[,1:9] %>% 
   as_data_frame() %>% 
   mutate(gene= rownames(PCA$rotation))
 
 saveRDS(p.pcaloadings, "data/pcaloadings.rds")
+
+# add new ranked metric ---------------------------------------------------
+
+
+c.df2 <- c.df%>% 
+  group_by(contrast_id)%>%
+  #mutate(logFC_sc = logFC))%>%
+  mutate(effect= logFC*-log10(FDR_mod))%>%
+  mutate(ranked_effect= rank(effect))%>%
+  mutate(scaled_effect= scale(effect),
+         norm_ranked_effect = ranked_effect/max(ranked_effect))
+
+contrast_oi<-contrast_cs_noprot
+wide_lfc= c.df2 %>%
+  dplyr::select(effect, contrast_id, gene)%>% 
+  filter(contrast_id %in% contrast_oi)%>%
+  pivot_wider(names_from = contrast_id, values_from  = effect, values_fn= mean)%>%
+  drop_na() %>%
+  as.data.frame()%>% 
+  column_to_rownames("gene")%>% 
+  as.matrix()
+get_boxplot_from_matrix(wide_lfc)
+
+PCA= prcomp(t(wide_lfc), center = T, scale. =T)
+#PCA= prcomp(t(cm_res), center = T, scale. =T)
+
+p.df= PCA$x %>% 
+  as.data.frame()%>%
+  rownames_to_column("contrast_id")%>%
+  as_tibble()%>% 
+  mutate(species= ifelse(grepl("hs", contrast_id), "human", "animal"))%>%
+  left_join(label_colors)
+p1= plot_pca(p.df,PCA, 1,2)
+p2= plot_pca(p.df,PCA, 3,4)
+p1
+p2
+# check genes on pca loadings ---------------------------------------------
+
 
 g.u<- p.pcaloadings%>% 
   arrange(desc(PC2))%>% 

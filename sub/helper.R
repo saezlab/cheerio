@@ -57,8 +57,10 @@ get_top_consistent_gene2 <-
            missing_prop= 5){
     
     #reduce df to alpha level cut off & contrast id
-    contrast_df_filt= joint_contrast_df %>% 
-      filter(contrast_id %in% query_contrasts)%>%
+    contrast_df_filt1= joint_contrast_df %>% 
+      filter(contrast_id %in% query_contrasts)
+    
+    contrast_df_filt<- contrast_df_filt1 %>%
       filter(FDR< alpha)
     
     gene_counts = contrast_df_filt %>% 
@@ -145,7 +147,7 @@ get_top_consistent_gene2 <-
     #join back to the original data frame
     df.full= df.median %>%
       arrange(desc(m.r)) %>%
-      left_join(contrast_df_filt%>%
+      left_join(contrast_df_filt1%>%
                   dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")%>%
       left_join(df.msign)
     

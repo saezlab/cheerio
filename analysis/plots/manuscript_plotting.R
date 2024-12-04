@@ -4,11 +4,11 @@ library(cowplot)
 library(ggrepel)
 library(ggdendro)
 
-c.df= readRDS("data/contrasts_query_df_translated3.rds")
+c.df= readRDS("app_data/contrasts_query_df_translated3.rds")
 
 contrasts_oi <- c.df %>%
   filter(!grepl("snRNA_", contrast_id) | grepl("snRNA_CM|snRNA_FB", contrast_id)) %>%
-  filter(!grepl("HCMvsDCM", contrast_id)) %>%
+  #filter(!grepl("HCMvsDCM", contrast_id)) %>%
   pull(contrast_id)%>% unique()
 
 contrasts_oi
@@ -42,13 +42,26 @@ dev.off()
 c.df2<- c.df  %>%
   filter(contrast_id %in% contrasts_oi)
 
+cc_colors <- c("A" = "#3A6EA5","B" = "#E29F91",  "C" = "#AB82A4", "D" = "#6F9F8A")
+
+label_colors <- c.df2 %>%
+  distinct(contrast_id, cc) %>%
+  arrange(cc, contrast_id)%>%
+  mutate(color = cc_colors[as.character(cc)])
+
+unname(label_colors$color)
+label_colors$contrast_id
+
 # Filter and count genes with FDR < 0.05 for each contrast
 count_df <- c.df2 %>%
   filter(contrast_id %in% contrasts_oi) %>%
   filter(FDR < 0.05) %>%
   group_by(contrast_id) %>%
   summarise(num_genes = n())%>%
-  complete(contrast_id = unique(contrasts_oi), fill = list(num_genes = 0))#%>%
+  complete(contrast_id = unique(contrasts_oi), fill = list(num_genes = 0))%>%
+  left_join(c.df2 %>%distinct(contrast_id, cc), by= "contrast_id")%>%
+  mutate(contrast_id = factor(contrast_id, levels= label_colors$contrast_id)) %>%
+  arrange(cc, contrast_id)
   #mutate(contrast_id = factor(contrast_id, levels = ordered_contrast_ids)) # Set order based on clustering
 
 # Bar plot displaying the number of genes with FDR < 0.05
@@ -67,25 +80,29 @@ bar_plot <- ggplot(count_df, aes(x = contrast_id, y = num_genes)) +
         ) +
   labs(y = "DEG\ncount")
 bar_plot
+
 # Main plot
 main_plot <- c.df %>%
   filter(contrast_id %in% contrasts_oi) %>%
   mutate(color = factor(ifelse(FDR < 0.05 & logFC > 0, "up",
                                ifelse(FDR < 0.05 & logFC < 0, "dn", "unreg")),
-                        levels = c("unreg", "up", "dn"))) %>%  # Set order of plotting
-#  mutate(contrast_id = factor(contrast_id, levels = ordered_contrast_ids))%>% # Set order based on clustering
+                        levels = c("unreg", "up", "dn"))) %>% 
+  arrange(color) %>% # Set order of plotting
+  mutate(contrast_id = factor(contrast_id, levels = label_colors$contrast_id))%>% # Set order based on clustering
   ggplot(aes(x = contrast_id, y = logFC, color = color)) +
-  geom_jitter(size = 0.2, width = 0.3) +
+  geom_jitter(size = 0.2, width = 0.3, alpha = 0.3) +
   theme_cowplot() +
   scale_color_manual(values = c("grey", "red", "blue")) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust= 0.5),
+  theme(axis.text.x = element_text(angle = 90, 
+                                   hjust = 1, 
+                                   vjust= 0.5,
+                                   color = label_colors$color),
         legend.position = "none") +
   labs(x = "")
+  
+main_plot
 
 # Display the combined plot
-
-
-
 combined_plot <- plot_grid(
   #dendrogram_plot,
   bar_plot,
@@ -95,12 +112,12 @@ combined_plot <- plot_grid(
   rel_heights = c(0.2, 1)
 )
 combined_plot
-c.df2 %>% filter(grepl("Endo", contrast_id))
+#c.df2 %>% filter(grepl("Endo", contrast_id))
 print(combined_plot)
 
 pdf(file = "figures/lfc_jitter_plot.pdf", 
-    height= 7, 
-    width=5)
+    height= 6, 
+    width=6)
 print(combined_plot)
 dev.off()
 #
@@ -113,7 +130,7 @@ p.coverag <- c.df%>%
   distinct(contrast_id, n_genes)%>%
   #count(contrast_id)%>%
   ggplot(., aes(x= reorder(contrast_id,n_genes), y= n_genes))+
-  geom_col()+
+  geom_col(color="black", fill="grey", width= 0.5)+
   coord_flip()+
   theme_cowplot()+
   labs(y= "number of genes", 
@@ -131,9 +148,9 @@ p.deg <- c.df %>%
        x= "")
 
 pdf("figures/plot_coverage.pdf",
-    width = 15, 
+    width = 8, 
     height= 9)
-plot_grid(p.coverag, p.deg)
+p.coverag
 dev.off()
 
 

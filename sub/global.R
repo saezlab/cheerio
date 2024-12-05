@@ -68,6 +68,8 @@ hcm_contrasts<- c("hs_HCMvsNF_RNA",
                   "hs_HCMpEFvsNF_prot",
                   "hs_cHYPvsNF_prot"
 )
+contrast_ids <- joint_contrast_df$contrast_id%>% unique()
+
 
 # app stuff ---------------------------------------------------------------
 legend_lfc_plot= readRDS("app_data/legend_for_lfc_plot.rds")
@@ -95,3 +97,19 @@ myColors_soft <- c("#6A7D8A",  # Muted blue-gray
                    "#8C6E63",  # Muted brown
                    "#667C60",  # Muted olive green
                    "#A67D74")  # Muted pink-brown
+
+myColors_full <- c(myColors_soft, myColors, myColors1)
+
+
+# -------------------------------------------------------------------------
+##testings:
+example_contrasts <- c(contrast_ids[grepl("TAC", contrast_ids)],
+                       contrast_ids[grepl("fetal", contrast_ids)],
+                       "hs_HCMvsNF_RNA", "hs_HCMvsNF_snRNA_CM")
+
+
+get_top_consistent_gene2(joint_contrast_df = joint_contrast_df,
+                         query_contrasts = example_contrasts, 
+                         missing_prop=8, 
+                         alpha= 0.05
+                         )

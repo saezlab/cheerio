@@ -63,17 +63,20 @@ get_top_consistent_gene2 <-
     contrast_df_filt <- contrast_df_filt1 %>%
       filter(FDR< alpha)
     
+    # count how many contrasts report a gene under these restrictions
     gene_counts = contrast_df_filt %>% 
       distinct(gene, contrast_id)%>%
       group_by(gene)%>%
         count()
     
+    # add the cut off number (how many contrasts need to report a gene)
     p.df <- gene_counts %>% 
       ungroup()%>%
       count(n)%>%
       mutate(selected = ifelse(n >= missing_prop, "selected", "other"), 
              n= factor(n, levels =  1:length(query_contrasts)))
       
+    ## PLOT #1 - barplot, showing number of contrasts
     p.overlaps = p.df %>%
         ggplot(aes(x = n, y= nn))+
         geom_col(aes(fill = selected), 
@@ -84,7 +87,7 @@ get_top_consistent_gene2 <-
         geom_text(
           aes(label = ifelse(selected=="selected", nn, ""), y = nn), 
           vjust = -0.5,  # Positioning of the label above the bar
-          color = "darkred",  # Text color to match the highlighted bar
+          color = "black",  # Text color to match the highlighted bar
           size = 4        # Adjust text size as needed
           )+
         theme(axis.line = element_blank())+
@@ -92,10 +95,11 @@ get_top_consistent_gene2 <-
              y= "Number of DEGs",
              fill= "")
    
-     ##### get the intersection genes by looking for gene with times the allowed NA
-    intersect_genes<- gene_counts %>% filter(n>= missing_prop)%>% pull(gene)%>% unique()
+    ## explore direction of regulation
+    # get the intersection genes that are selected
+    intersect_genes <- gene_counts %>% filter(n>= missing_prop)%>% pull(gene)%>% unique()
 
-    # assign whether genes are consistent in direction
+    # calculate mean sign of regulation and label clean regulated genes 
     df.msign= contrast_df_filt %>%
       dplyr::select(gene, contrast_id, logFC)%>% 
       filter(gene %in% intersect_genes) %>%
@@ -109,8 +113,10 @@ get_top_consistent_gene2 <-
                                   ),
                            levels= c("upregulated", "inconsistent", "downregulated")
                            )
-             )
+             )%>%
+      ungroup()
     
+    ## PLOT 2 - Stacked barplot to visualize the direction of regulation of the selected genes
      p.bar.intersect<- df.msign %>%
         count(top_)%>%
         ggplot(., aes(x = 1, y =n, fill = top_)) +
@@ -118,103 +124,91 @@ get_top_consistent_gene2 <-
         geom_text(aes(label = ifelse(n >= 10, n, "")), 
                   position = position_stack(vjust = 0.5), # Center the labels within the bars
                   color = "white") +
-        scale_fill_manual(values = rev(c("darkblue", "darkgrey", "darkred")))+
+        scale_fill_manual(values = list("downregulated" = "darkblue", 
+                                        "inconsistent"= "darkgrey", 
+                                        "upregulated"="darkred"))+
         theme_cowplot()+
         theme(axis.text.x = element_blank(), 
               axis.line = element_blank(), 
               axis.ticks.x = element_blank())+
         labs(x="", y="number of genes", fill ="")
     
-    # combine
+    # combine PLOT 1 & PLOT 2
     p.int=  cowplot::plot_grid( p.overlaps,p.bar.intersect,
                                  ncol = 2, labels = c("A", 
                                                       "B"), 
                                 rel_widths = c(2,1.2))
     
-    # calculate the median normalized rank across contrasts,
-    # this will serve as new ranking
-      
-    df.median= contrast_df_filt %>%
-      filter(contrast_id %in% query_contrasts,
-             gene %in% intersect_genes)%>% 
-      group_by(gene)%>%
-      summarise(m.r= mean(gene_rank_norm))
-   
-    #join back to the original data frame
-    df.full= df.median %>%
-      arrange(desc(m.r)) %>%
-      left_join(contrast_df_filt1%>%
-                  dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")%>%
-      left_join(df.msign)
+    # select the consistent genes
+    consistent.genes <- df.msign %>% 
+      filter(top_ != "inconsistent") %>% 
+      pull(gene)
     
-    if(length(intersect_genes)!= 0){
+    # procced only if there are any consistent genes
+    if(length(consistent.genes)!= 0){
       
-      # we prioritize those genes that are covered by all contrasts
+      # calculate the median normalized rank across contrasts,
+      # this will serve as new ranking
+      # then join back to get lfc values per contrast (contrast_df_filt1)
+      # as well as the assigned regulatory group (df.msign)
+      df.full= contrast_df_filt %>%
+        filter(contrast_id %in% query_contrasts,
+               gene %in% consistent.genes)%>% 
+        group_by(gene)%>%
+        summarise(m.r= mean(gene_rank_norm))%>%
+        arrange(desc(m.r)) %>%
+        left_join(contrast_df_filt1%>%
+                    dplyr::select(gene, logFC, FDR, contrast_id), by= "gene")%>%
+        left_join(df.msign)
       
+      # extract up and down regulated genes 
       top_dn= df.full%>% 
-        filter(gene %in% intersect_genes)%>%
         filter(top_== "downregulated")%>%
         arrange(desc(m.r))%>% 
         distinct(gene, m.r)%>%
         pull(gene)
       
       top_up= df.full%>% 
-        filter(gene %in% intersect_genes)%>%
         filter(top_== "upregulated")%>%
         arrange((m.r))%>% 
         distinct(gene, m.r)%>%
         pull(gene)
       
       p <- lapply(list(top_up, top_dn), function(genes){
-          
+        
+        # ensure that cutoff is not larger than number of genes  
+        new_cut = min(cutoff, length(genes))
+        
+        #subset the data 
+        # genes was orderd so the factor levels are ordered based on rank
         df.sub<- df.full %>% 
-          filter(gene %in% c( genes[1:cutoff]))%>% 
-          mutate(gene= factor(gene, levels= c(genes)))
+          filter(gene %in% c( genes[1:new_cut]))%>% 
+          mutate(gene= factor(gene, levels= genes))
+        
+        # we want to ensure that the y-axis has a bit space and includes 0 
         if(mean(df.sub$logFC)>0){
           ylims= c(0,max(df.sub$logFC)+0.2)
         }else{
           ylims= c(min(df.sub$logFC)-0.2, 0)
         }
+        
+        ## PLOT 3 - boxplot showing logfc of top genes
         df.sub%>%
           ggplot(., 
                  aes(x= gene, y= logFC))+
           geom_boxplot(outlier.colour = NA, width = 0.4)+
           geom_jitter(aes( color= contrast_id), width= 0.2)+
-          scale_color_manual(values= myColors_soft)+
+          scale_color_manual(values= myColors_full)+
           theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
           labs(x= "", color= "Contrast ID")+
           geom_hline(yintercept = 0, color="darkgrey")+
           ylim(ylims)
-          #ylim(0, max(abs(df.sub$logFC))*sign(mean(df.sub$logFC)))
-        # Create the interactive plot with plotly
-        # Create the interactive plot with plotly
-        # df.sub %>%
-        #   plot_ly() %>% 
-        #   add_trace(x = ~as.numeric(gene),y = ~logFC, type = "box", 
-        #             hoverinfo = 'name+y', color="black") %>%
-        #   add_markers(x = ~jitter(as.numeric(gene)), y = ~logFC, color = ~contrast_id,
-        #               marker = list(size = 10),
-        #               hoverinfo = "text",
-        #               text = ~paste0("Group: ",contrast_id,
-        #                              "<br>xval: ",logFC),
-        #               showlegend = FALSE) %>% 
-        #   layout(
-        #     xaxis = list(title = "", 
-        #                  showticklabels = TRUE),
-        #     yaxis = list(range = ylims),
-        #     title = ifelse(mean(df.sub$logFC) > 0, 
-        #                    "A",
-        #                    "B"),
-        #     
-        #     legend = list(title = list(text = "Contrast ID"))
-        #   )
-          
       })
-      #p1 <- subplot(p[[1]], p[[2]], nrows = 2, titleX = TRUE, titleY = TRUE)
-      
-      # Show the final interactive plot
-      #p1
+     
+      #extract legend to be plotted only once
       legend_p<- get_legend(p[[1]])
+      
+      # join PLOT 3 together:
       p.top_genes = plot_grid(cowplot::plot_grid(remove_legend(p[[1]]), 
                                        remove_legend(p[[2]]),
                                        ncol = 1,
@@ -222,30 +216,38 @@ get_top_consistent_gene2 <-
                                                  "B")),
                               legend_p, nrow= 1, rel_widths= c(1,0.2))
       
-      ##add hmap
-      plot.genes= unique(c(top_dn, top_up))
-      
-      # now we select all genes that are not inconsistent
+      ## Preparations for the heatmap
+    
+      # subset data and transform to matrix
       mat= df.full %>% 
         dplyr::select(contrast_id, gene,  logFC, top_)%>%
-        filter(gene %in% plot.genes)%>%
+        filter(gene %in% consistent.genes)%>%
         select(-top_)%>%
         pivot_wider(names_from = contrast_id, values_from = logFC, values_fn = mean)%>%
         as.data.frame()%>%
-        #filter(!is.na(gene))%>%
         column_to_rownames("gene")%>% 
-        as.matrix()
-        
-        # sums_per_row <-apply(mat, 1, function(row) sum(!is.na(row)))
-        # mat= mat[sums_per_row>=2 ,]
-        col_names_plot= c(top_dn[1:cutoff], top_up[1:cutoff])
-        dim(mat)
-      labeled_genes= rownames(mat)
-      labeled_genes[!labeled_genes %in% col_names_plot] <- ""
+        as.matrix()%>%
+        t()
       
-      length(labeled_genes)
+      # this can be used to trouble shoot if NAs trouble the clustering of the 
+      # heatmap:
+      # sums_per_row <-apply(mat, 1, function(row) sum(!is.na(row)))
+      # mat= mat[sums_per_row>=2 ,]
       
-      hmap_top <- ComplexHeatmap::Heatmap(t(mat),
+      # we create labeled_genes to only plot labels of genes
+      # that fit the cutoff
+      # for big heatmaps, this gets very messy so there we will plot nothing
+      if(dim(mat)[2]>50){
+        labeled_genes <- rep("",length(colnames(mat)))
+      }else{
+        labeled_genes= colnames(mat)
+        #col_names_plot = c(top_dn[1:new_cut], top_up[1:new_cut])
+        #labeled_genes[!labeled_genes %in% col_names_plot] <- ""
+      }
+
+    
+      ## PLOT 4 - heatmap of all consistent genes with top genes labeled
+      hmap_top <- ComplexHeatmap::Heatmap((mat),
                                           #rect_gp = gpar(fill = "grey", lwd = 1),
                                           name = "logFC", 
                                           na_col = "black",
@@ -255,13 +257,12 @@ get_top_consistent_gene2 <-
                                           row_names_centered = TRUE,
                                           show_row_dend = F, 
                                           column_labels = labeled_genes,
-                                          column_names_gp = gpar(fontsize = 7),
+                                          column_names_gp = gpar(fontsize = 8),
                                           row_names_side = "left",
                                           row_dend_side = "left"
                                           #clustering_distance_rows = "pearson",
                                           #clustering_distance_columns = "pearson"
                                           )
-      hmap_top
       
       gene_list= list("i"= intersect_genes, 
                   "u"= top_up, 
@@ -279,6 +280,7 @@ get_top_consistent_gene2 <-
       hmap_top = p
       gene_list= list()
       drugst_URL=NULL
+      df.full = NULL
     }
     
     return(list(p.hist=p.int,
@@ -290,7 +292,8 @@ get_top_consistent_gene2 <-
                 drugst_URL=drugst_URL
     ))
   }
-#query_contrasts <- c("mm_TAC_RNA_2w")
+
+
 get_consistent_tfs <- function(df_func, 
                                query_contrasts= c("mm_TAC_RNA_2w", 
                                                   "hs_HCMvsNF_snRNA_CM",
@@ -413,7 +416,7 @@ get_consistent_tfs <- function(df_func,
              aes(x= reorder(source,mean.score),  y= score))+
       geom_boxplot(outlier.colour = NA, width = 0.4)+
       geom_jitter(aes( color= condition), width= 0.2, size = 4)+
-      scale_color_manual(values= myColors_soft)+
+      scale_color_manual(values= myColors_full)+
       theme(axis.text.x = element_text(angle= 60 , hjust= 1))+
       labs(x= "", color= "Contrast ID")+
       geom_hline(yintercept = 0, color="darkgrey")

@@ -102,14 +102,14 @@ myColors_full <- c(myColors_soft, myColors, myColors1)
 
 
 # -------------------------------------------------------------------------
-##testings:
-example_contrasts <- c(contrast_ids[grepl("TAC", contrast_ids)],
-                       contrast_ids[grepl("fetal", contrast_ids)],
-                       "hs_HCMvsNF_RNA", "hs_HCMvsNF_snRNA_CM")
-
-
-get_top_consistent_gene2(joint_contrast_df = joint_contrast_df,
-                         query_contrasts = example_contrasts, 
-                         missing_prop=8, 
-                         alpha= 0.05
-                         )
+# ##testings:
+# example_contrasts <- c(contrast_ids[grepl("TAC", contrast_ids)],
+#                        contrast_ids[grepl("fetal", contrast_ids)],
+#                        "hs_HCMvsNF_RNA", "hs_HCMvsNF_snRNA_CM")
+# 
+# 
+# get_top_consistent_gene2(joint_contrast_df = joint_contrast_df,
+#                          query_contrasts = example_contrasts, 
+#                          missing_prop=8, 
+#                          alpha= 0.05
+#                          )

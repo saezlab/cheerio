@@ -49,6 +49,7 @@ get_top_consistent_gene2 <-
   function(joint_contrast_df,
            query_contrasts= c("mm_TAC_RNA_2w", 
                               "hs_HCMvsNF_snRNA_CM",
+                              "hs_HCMvsNF_snRNA_Adipo",
                               "hs_fetal_RNA", 
                                "hs_HCMvsNF_RNA",
                               "hs_HCMvsNF_snRNA_Neu"), 
@@ -175,7 +176,14 @@ get_top_consistent_gene2 <-
         pull(gene)
       
       p <- lapply(list(top_up, top_dn), function(genes){
-        
+        print(genes)
+        if(length(genes)==0){
+            # p <- ggplot()+ 
+            # annotate("text", x = 4, y = 25, size=6, label = "no genes")+
+            # theme_void()
+            return(NULL)
+        }
+      
         # ensure that cutoff is not larger than number of genes  
         new_cut = min(cutoff, length(genes))
         
@@ -206,7 +214,16 @@ get_top_consistent_gene2 <-
       })
      
       #extract legend to be plotted only once
-      legend_p<- get_legend(p[[1]])
+      legends <- lapply(p, function(plot) {
+        if (!is.null(plot)) {
+          legend <- cowplot::get_legend(plot + theme(legend.position = "right"))
+          return(legend)
+        }
+        return(NULL)
+      })
+      
+      # Filter out NULL legends
+      legends <- legends[!sapply(legends, is.null)]
       
       # join PLOT 3 together:
       p.top_genes = plot_grid(cowplot::plot_grid(remove_legend(p[[1]]), 
@@ -214,7 +231,7 @@ get_top_consistent_gene2 <-
                                        ncol = 1,
                                        labels= c("A", 
                                                  "B")),
-                              legend_p, nrow= 1, rel_widths= c(1,0.2))
+                              legends[[1]], nrow= 1, rel_widths= c(1,0.2))
       
       ## Preparations for the heatmap
     
@@ -284,7 +301,6 @@ get_top_consistent_gene2 <-
     }
     
     return(list(p.hist=p.int,
-                #p.venn= p.venn,
                 genes= gene_list,
                 df= df.full, 
                 p.top_genes= p.top_genes,

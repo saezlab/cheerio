@@ -74,11 +74,7 @@ get_top_consistent_gene2 <-
       mutate(selected = ifelse(n >= missing_prop, "selected", "other"), 
              n= factor(n, levels =  1:length(query_contrasts)))
       
-    # if(max(p.df$n)< length(query_contrasts)){
-    #   rbind(p.df, c(length(query_contrasts), 0))
-    # }
-      
-      p.overlaps = p.df %>%
+    p.overlaps = p.df %>%
         ggplot(aes(x = n, y= nn))+
         geom_col(aes(fill = selected), 
                        color = "black" # Keep the fill white to emphasize the outline
@@ -480,7 +476,7 @@ get_consistent_tfs <- function(df_func,
   )
 }
 
-get_consistent_tfs(df_func, missing_prop= 1)
+
 #' plot contrast expression
 #' 
 #' @param joint_contrast_df dataframe to be plotted

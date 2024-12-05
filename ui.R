@@ -166,7 +166,11 @@ tabPanel(
     br(), 
     pickerInput(inputId = "select_contrast_mm", 
                 label = "A) Animal studies:",
-                choices = joint_contrast_df%>% filter(cc =="A")%>% pull(contrast_id)%>% unique(), 
+                choices = joint_contrast_df%>% 
+                  filter(cc =="A")%>% 
+                  arrange(contrast_id)%>%
+                  pull(contrast_id)%>%
+                  unique(), 
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
@@ -175,7 +179,11 @@ tabPanel(
     
     pickerInput(inputId = "select_contrast_hs", 
                 label = "B) Human HCM studies:",
-                choices = joint_contrast_df%>% filter(cc =="B")%>% pull(contrast_id)%>% unique(), 
+                choices = joint_contrast_df%>% 
+                  filter(cc =="B")%>%
+                  arrange(contrast_id)%>%
+                  pull(contrast_id)%>% 
+                  unique(), 
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
@@ -184,7 +192,10 @@ tabPanel(
     
     pickerInput(inputId = "select_contrast_hs2", 
                 label = "C+D) Human HF or fetal gene program",
-                choices = joint_contrast_df%>% filter(cc %in% c("C", "D"))%>% pull(contrast_id)%>% unique(), 
+                choices = joint_contrast_df%>% 
+                  filter(cc %in% c("C", "D"))%>%
+                  arrange(contrast_id)%>%
+                  pull(contrast_id)%>% unique(), 
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),

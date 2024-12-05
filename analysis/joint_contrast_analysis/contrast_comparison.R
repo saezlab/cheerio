@@ -28,6 +28,22 @@ c.df$contrast_id%>% unique()%>%
 length(unique(c.df$gene))
 unique(c.df$contrast_id)
 
+cc_colors <- c("A" = "#20558c",
+               "B" = "#ff8708",
+               "C" = "#a8629d",
+               "D" = "#0c9659")
+#aesthetics and meta data
+label_colors <- c.df %>%
+  distinct(contrast_id, cc, model, modal) %>%
+  arrange(cc, contrast_id)%>%
+  mutate(color = cc_colors[as.character(cc)], 
+         species= str_to_title(substr(contrast_id, 1, 2)),
+         hypertrophy= "pathologic",
+         hypertrophy= ifelse(cc %in% c("C", "D"), NA, hypertrophy),
+         hypertrophy = ifelse(grepl("swim",contrast_id), "physiologic", hypertrophy),
+  )
+
+
 # run correlation and hierarchical cluster --------------------------------
 
 get_boxplot_from_matrix<- function(mtx){
@@ -102,24 +118,12 @@ unsupervised_wrapper<- function(c.df,
   # filling
   col_fun = colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
   # labels
-  cc_colors <- c("A" = "#20558c",
-                 "B" = "#ff8708",
-                 "C" = "#a8629d",
-                 "D" = "#0c9659")
+ 
   modal_colors <- c("transcriptome" = "#FFA07A", "proteome" = "#20B2AA", "translatome" = "#FFD700") # 3 levels
   model_colors <- c("pathologic" = "#20558c", "physiologic" = "#FFD700", "NA"= "grey")   # 2 levels + NA
   species_colors <- c("Hs" = "#ff8708", "Rn" = "#d62f2f", "Mm" = "#0c9659")        # 3 species
   
-  label_colors <- c.df %>%
-    distinct(contrast_id, cc, model, modal) %>%
-    arrange(cc, contrast_id)%>%
-    mutate(color = cc_colors[as.character(cc)], 
-           species= str_to_title(substr(contrast_id, 1, 2)),
-           hypertrophy= "pathologic",
-           hypertrophy= ifelse(cc %in% c("C", "D"), NA, hypertrophy),
-           hypertrophy = ifelse(grepl("swim",contrast_id), "physiologic", hypertrophy),
-           )
-
+  
   # Create named vectors for each annotation variable
   contrast_colors <- setNames(label_colors$color, label_colors$contrast_id)
   
@@ -323,10 +327,10 @@ plot_pca= function(p.df2,
                   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf")
 
   p.df2 %>% 
-    mutate(hypertophy= ifelse(is.na(hypertophy), "NA", hypertophy))%>%
+    mutate(hypertrophy= ifelse(is.na(hypertrophy), "NA", hypertrophy))%>%
     ggplot(aes(x = !!rlang::ensym(x_col),
                y = !!rlang::ensym(y_col), 
-               shape= hypertophy, 
+               shape= hypertrophy, 
                color= species,
                label = contrast_id))+
     #geom_text(alpha= 0.6, color="black")+
@@ -418,41 +422,7 @@ p.pcaloadings= pca_res[[1]]$rotation[,1:9] %>%
 
 saveRDS(p.pcaloadings, "data/pcaloadings.rds")
 
-# add new ranked metric ---------------------------------------------------
 
-
-c.df2 <- c.df%>% 
-  group_by(contrast_id)%>%
-  #mutate(logFC_sc = logFC))%>%
-  mutate(effect= logFC*-log10(FDR_mod))%>%
-  mutate(ranked_effect= rank(effect))%>%
-  mutate(scaled_effect= scale(effect),
-         norm_ranked_effect = ranked_effect/max(ranked_effect))
-
-contrast_oi<-contrast_cs_noprot
-wide_lfc= c.df2 %>%
-  dplyr::select(effect, contrast_id, gene)%>% 
-  filter(contrast_id %in% contrast_oi)%>%
-  pivot_wider(names_from = contrast_id, values_from  = effect, values_fn= mean)%>%
-  drop_na() %>%
-  as.data.frame()%>% 
-  column_to_rownames("gene")%>% 
-  as.matrix()
-get_boxplot_from_matrix(wide_lfc)
-
-PCA= prcomp(t(wide_lfc), center = T, scale. =T)
-#PCA= prcomp(t(cm_res), center = T, scale. =T)
-
-p.df= PCA$x %>% 
-  as.data.frame()%>%
-  rownames_to_column("contrast_id")%>%
-  as_tibble()%>% 
-  mutate(species= ifelse(grepl("hs", contrast_id), "human", "animal"))%>%
-  left_join(label_colors)
-p1= plot_pca(p.df,PCA, 1,2)
-p2= plot_pca(p.df,PCA, 3,4)
-p1
-p2
 # check genes on pca loadings ---------------------------------------------
 
 
@@ -488,6 +458,7 @@ t(cm_res_scaled)[g.d, ]%>%
   geom_jitter(aes( #shape= animal, 
                    color= name))+
   theme(axis.text.x = element_text(angle= 60 , hjust= 1))
+
 get_box<- function(c.df, genes, c.ids){
   c.df %>% 
     filter(gene %in% c( genes),
@@ -608,7 +579,7 @@ source("sub/helper.R")
 library(ComplexUpset)
 library(survcomp)
 library(UpSetR)
-query_contrasts<- contrast_hyp
+
 pull_fisher_p<- function(query_contrasts, c.df, missing_prop= 90){
   
   # update the pval
@@ -636,7 +607,9 @@ pull_fisher_p<- function(query_contrasts, c.df, missing_prop= 90){
 }
 
 joint_contrast_df<-c.df
-query_contrasts= contrast_hyp2
+query_contrasts <- contrast_patho[!grepl("fetal", contrast_patho)]
+query_contrasts <- query_contrasts[!grepl("HF", query_contrasts)]
+
 alpha= 0.05
 cutoff= 15
 missing_prop= 50
@@ -822,6 +795,12 @@ get_top_consistent_gene<-
 
 ## get contrast IDs
 
+# now add fisher p_value
+p_hyp= pull_fisher_p(query_contrasts, c.df, 80)
+
+res <- get_top_consistent_gene2(c.df ,
+                         query_contrasts, missing_prop = 3)
+## now 
 # Here, we focus want to include modalities in animal models and human CMs
 
 c.df %>%
@@ -829,20 +808,14 @@ c.df %>%
   distinct(contrast_id, x)%>% 
   print(n=100)
 
-contrast_hyp2<- contrast_hyp2[!grepl("rn", contrast_hyp2)]
-
 # query_contrasts<- contrast_hyp2
 
-c_hyp= get_top_consistent_gene(joint_contrast_df = c.df, 
-                               query_contrasts =contrast_hyp, 
-                               missing_prop = 80,
-                               cutoff= 200)
-
 c_hyp2= get_top_consistent_gene(joint_contrast_df = c.df, 
-                                query_contrasts =contrast_hyp2,
+                                query_contrasts =query_contrasts,
                                 cutoff= 50, 
-                                missing_prop = 90 )
+                                missing_prop = 80 )
 
+c_hyp2
 pdf("figures/hmap_lfc_cross_modal.pdf", 
     width= 7, height= 2.4)
 c_hyp2$hmap_top
@@ -851,9 +824,6 @@ pdf("figures/hmap_lfc_transcrip.pdf",
     width= 5, height= 2.2)
 c_hyp$hmap_top
 dev.off()
-
-# now add fisher p_value
-p_hyp= pull_fisher_p(contrast_hyp, c.df, 80)
 
 sig <- p_hyp %>% 
   filter(fisher_p_adj<0.05)%>%

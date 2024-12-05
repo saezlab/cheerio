@@ -23,7 +23,7 @@ pw<- "~/R-projects/Collaborations/cheerio/"
 gc= read.csv(paste0(pw, "../cheerio_data/raw_data/magnet/gene_count_matrix.csv"))
 #tc= read.csv("data/raw_data/magnet/transcript_count_matrix.csv")
 meta= read.csv(paste0(pw,"../cheerio_data/raw_data/magnet/MAGE_metadata.txt"))
-
+meta %>% count(etiology)
 meta$Sample.Name
 colnames(gc)
 dim(gc)

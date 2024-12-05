@@ -60,7 +60,7 @@ get_top_consistent_gene2 <-
     contrast_df_filt1= joint_contrast_df %>% 
       filter(contrast_id %in% query_contrasts)
     
-    contrast_df_filt<- contrast_df_filt1 %>%
+    contrast_df_filt <- contrast_df_filt1 %>%
       filter(FDR< alpha)
     
     gene_counts = contrast_df_filt %>% 

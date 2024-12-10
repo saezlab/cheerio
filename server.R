@@ -551,10 +551,10 @@ output$drugst_one_link <- renderUI({
   # Check if res$drugURL exists and is not NULL
   if (!is.null(res$drugst_URL)) {
     HTML(paste0(
-      "<p> 3. To explore possible gene network based drug interactions, tissue expression and related disorders go to ",
-      "<a href='", res$drugst_URL, "' target='_blank'> Drugst.one </a> ",
-      "from the <a href='https://www.cosy.bio/' target='_blank'> Baumbachlab </a> ",
-      "and explore a knowlege graph around the signature.</p>"
+      "<p> 2. Explore a ",
+      "<a href='", res$drugst_URL, "' target='_blank'> Knowledge Graph </a> ",
+      "around the generated signature genes. This knowledge graph is build by drugst.one from the <a href='https://www.cosy.bio/' target='_blank'> Baumbachlab </a>
+      and can help to characterize drug targets, protein interactions as well as tissue expression between organs.</p>"
     ))
   } else {
     HTML("<p>No URL available. Please select contrasts and try again.</p>")
@@ -886,6 +886,7 @@ output$gsea_res_table = DT::renderDataTable({
                   option = list(scrollX = T, 
                                 autoWidth = T, 
                                 dom = "Bfrtip",
+                                pageLength = 50, 
                                 buttons = c("copy", "csv", "excel")))%>%
     DT::formatSignif(columns = c("pval", "padj"), digits = 3)
 })
@@ -913,6 +914,7 @@ output$mouse_hypertrophyDT = DT::renderDataTable( {
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T, 
                                 autoWidth = T, 
+                                pageLength = 50, 
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))%>%
     DT::formatSignif(columns = c("FDR"), digits = 3)
@@ -929,6 +931,7 @@ output$human_HF_bulk_summDT = DT::renderDataTable({
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
                                 autoWidth = T,
+                                pageLength = 50, 
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))%>%
   DT::formatSignif(columns = c("fisher_pvalue"), digits = 3)
@@ -945,6 +948,7 @@ output$human_fetalDT = DT::renderDataTable({
                   extensions = "Buttons", rownames = F,
                   option = list(scrollX = T,
                                 autoWidth = T,
+                                pageLength = 50, 
                                 dom = "Bfrtip",
                                 buttons = c("copy", "csv", "excel")))%>%
     DT::formatSignif(columns = c("FDR"), digits = 3)
@@ -969,6 +973,7 @@ output$human_HCMDT = DT::renderDataTable({
                                  extensions = "Buttons", rownames = F,
                                  option = list(scrollX = T,
                                                autoWidth = T,
+                                               pageLength = 50, 
                                                dom = "Bfrtip",
                                                buttons = c("copy", "csv", "excel")))%>%
     DT::formatSignif(columns = c("FDR"), digits = 3)

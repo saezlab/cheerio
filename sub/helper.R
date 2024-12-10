@@ -735,6 +735,7 @@ make_nice_table <- function(df, color_column = NULL) {
       options = list(
         scrollX = TRUE,
         autoWidth = TRUE,
+        pageLength = 50, 
         dom = "Bfrtip",
         buttons = c("copy", "csv", "excel")
       )

@@ -1,3 +1,6 @@
-#### Functional Characterization of the heart failure consensus signature (HF-CS)
+#### Query estimated transcription factor (TF) activities
 
-Query signalling pathway activities ([PROGENy](https://saezlab.github.io/progeny/)), transcription factor activities ([DoRothEA](https://saezlab.github.io/dorothea/)) that characterize Cardiac Hypertrophy.
+We estimated TF activities with gene regulatory networks from [CollecTRI](https://github.com/saezlab/CollecTRI) using 
+[decoupleR](https://github.com/saezlab/decoupleR). 
+
+<br>Select a TF of interest to explore in which datasets this TF could be active</br>

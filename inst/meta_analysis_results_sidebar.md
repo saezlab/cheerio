@@ -2,7 +2,8 @@
 
 The contrasts from data sets used in this app can be queried and downloaded here.
 
-Select the contrast of interest and explore the data by sorting, filtering or downlaoding the tables. 
+Select the contrast of interest and explore the data by sorting, filtering or downloading the tables. 
+For full data download go to the data repository at Zenodo (doi:).
 
 
 

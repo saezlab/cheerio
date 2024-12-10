@@ -42,37 +42,35 @@ ui = function(request) {
                       choices = (sort(unique(joint_contrast_df$gene))), 
                       multiple = T,
                       options = list(`live-search` = TRUE,
-                                     size=10, `max-options` = 6),
-                      selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
+                                     size=10, `max-options` = 6)
+                     # selected = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" )) 
                       ),
           
           actionButton("reset_input", "Reset genes")
-        #   
-        #   checkboxGroupInput(inputId= "contrasts", label= "Select contrasts", 
-        #                      selected = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ),
-        #                      inline = FALSE, width = NULL, 
-        #                      choiceNames = c("Murine Hypertrophy" , "Human heart failure", "Human fetal" ),
-        #                      choiceValues = c("Murine_Hypertrophy" , "Human_HF", "Fetal" ))
+  
         ),
         mainPanel(
           tabsetPanel(
             type = "tabs",
             tabPanel("A. Animal models",
-                     h3("Regulation in Murine Cardiac Hypertrophy models"),
-                     h4("Gene expression regulation"),
+                     h3("1. Regulation in Murine Cardiac Hypertrophy models"),
+                     h4("1.1 Gene expression regulation"),
                      plotOutput("gene_expression_plots", width = "100%", height = "600px")%>%
                        withSpinner(),#, width = "100%", height = "600px"),
+                     p("Bar plots indicate log2 fold changes for different contrasts and data sets. Please refer to the table at the landing page for 
+                     more information on the contrasts."),
                      p(strong("Abbreviations:")),
-                     p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
-               swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                     p("Ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
+               swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pathologic hypertrophy); PE, phenylephrine."),
                      
                      br(),
                      br(),
-                     h4("Ribo-seq and RNA-seq correlation"),
+                     h4("1.2  Ribo-seq and RNA-seq correlation"),
                      plotOutput("cardiac_hyper_corr")%>%
                        withSpinner(),
+                     p("Comparison of logFC values in Ribo-seq (y-axis) and RNA-seq (x-axis) for different models (A - in vitro, B - in vivo)"),
                      p(strong("Abbreviations:")),
-                     p("2d, two days; 2wk, two weeks; swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                     p("2d, two days; 2wk, two weeks; swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pahtologic hypertrophy); PE, phenylephrine"),
                      
                      br(),
                      br(),
@@ -80,16 +78,21 @@ ui = function(request) {
                      hr(),
                      
                      #hw
-                     h3("Phenotype associations"),
-                     h4("Explore posible associations of a gene's expression with heart weight"),
+                     h3("2. Phenotype associations"),
+                     h4("2.1 Gene expression association with heart weight"),
                      br(),
                      p(br()),
                      plotOutput("heart_weight_plot", width = "100%", height = "400px")%>%
                        withSpinner(),
+                     p("Univariate Linear models are used to describe the association between gene expression and normalized heart weight.
+                        The model (normalized heart weight ~ b0 + b1 gene expression) was fit for each gene (panels) and contrast (x-axis).
+                       The coefficient of gene expression is displayed (y-axis), while the shape indicates whether the p-value of the coefficent was significant (p-value <0.05, triangle) or not (p-value > 0.05, circle). 
+                       The color indicates the R² of the model."), 
                      br(),
                      ##ipmc table
-                    h4("Explore posible associations of genetic variants with mouse phenotypes"),
-                    h5("Genes are queried in IMPC (International Mouse Phenotyping Consortium"),
+                    h4("2.2 Known associations of genetic variants with mouse phenotypes"),
+                    h5("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic variants and a diversity of measured phenotypes. We show whether the selected 
+                       genes are associated with any phenotypes in the IMPC data base."),
                     br(),
                     DT::dataTableOutput("IPMC_table")%>%
                       withSpinner(),
@@ -231,31 +234,33 @@ tabPanel(
                  icon=icon("paper-plane")) 
   ),
   mainPanel(
-    h3("Search for consistent genes"),
-    h4("Dysregulated genes (FDR-cutoff)"),
+    h3("1. Search for consistent genes"),
+    h4("1.1 Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist")%>%withSpinner(),
-    p("A. Barplot displays the overlap between the selected contrasts. Red indicates the number of genes for Signature generation."),
-    p("B. Barplot displays the number of genes of the intersect left that and their directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
-    p(""),
+    p("A. Histogram showing the number of differntially expressed genes (DEGs) (y-axis) reported by differnt number of contrasts (x-axis).
+                       Blue colored bars indicate which DEGs will be considered based on the selected minimum number of contrasts."),
+    p("B. The consistency of direction of regulation for the selected DEGs. Only consistent DEGs will be further considered."),
     hr(),
     br(),
     br(),
-    h4("Full signature of dysregulated gene(s)"),
+    h4("1.2 Full signature of dysregulated gene(s)"),
     
-    plotOutput("hmap_top")%>%withSpinner(),
+    plotOutput("hmap_top")%>% withSpinner(),
+    p("Heatmap displaying the full signature of consistently regulated genes."),
     hr(),
     br(),
     br(),
     
-    h4("Top consistently dysregulated gene(s)"),
+    h4("1.3 Top consistently dysregulated gene(s)"),
     plotOutput("cq_top")%>%withSpinner(),
+    p("Boxplots display top upregulated (top panel) and downregulated (bottom panel) genes from the generated signature."),
     hr(),
     br(),
     br(),
-    h3("Characterize the shared gene signature"),
+    h3("2. Characterize the shared gene signature"),
     br(),
     h5("You can now explore functional annotations of the up or downregulated genes!"),
-    p("1. Click one of the buttons to copy genes into your clipboard."),
+    p("1.1 Click one of the buttons to copy genes into your clipboard."),
        br(),
     fluidRow(
       uiOutput("clipup",  style = 'display: inline-block;margin-left: 15px;' ),
@@ -263,18 +268,18 @@ tabPanel(
       uiOutput("clipdn",  style = 'display: inline-block' )
       ),
     br(),
-    HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab-funki-analysis-rnfy3j.streamlit.app/'> FUNKi </a> 
-        from the <a href=' https://saezlab.org'> Saezlab </a and paste the genes into the gene submission field. 
-        </p> "),
-    HTML("<p> 2b. To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/Enrichr/'> Enrichr </a> 
+    # HTML("<p> 2a. To check the selected genes for footprints of TFs or Pathways go to <a href='https://saezlab-funki-analysis-rnfy3j.streamlit.app/'> FUNKi </a> 
+    #     from the <a href=' https://saezlab.org'> Saezlab </a and paste the genes into the gene submission field. 
+    #     </p> "),
+    HTML("<p> 1.2 To enrich gene sets from various biological databases (GO, MSIG, KEGG etc.) go to <a href='https://maayanlab.cloud/Enrichr/'> Enrichr </a> 
         or <a href='https://maayanlab.cloud/enrichr-kg'> Enrichr-KG </a> from the <a href=' https://labs.icahn.mssm.edu/maayanlab/'> Mayan lab</a and paste the genes into the gene submission field. 
         </p> "),
     uiOutput("drugst_one_link"),
-    p("4. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis! "),
+    p("3. Explore possible functional processes that your selected contrasts have in common and generate a hypothesis!"),
     hr(),  
     br(),
     br(),
-    h4("Explore the signature in table form"),
+    h3("3. Explore the signature in table form"),
     tabsetPanel(
       type = "tabs",
       tabPanel("Upregulated",
@@ -302,9 +307,9 @@ tabPanel(
                    br(),
             sidebarPanel(
               includeMarkdown("inst/functional_analysis_sidebar.md"),
-              p("Choose the contrast to display functional footprinting results"),
+              p(""),
               pickerInput(inputId = "select_tf",
-                      label = "Select transcription factor(s)",
+                      label = "Select TF(s)",
                       choices = sort(TFs),
                       multiple = T,
                       options = list(`live-search` = TRUE,
@@ -319,8 +324,12 @@ tabPanel(
                 tabPanel("A. Animal models",
                          h3("Transcription factor activities"),
                          plotOutput("funcA_tf", width = "100%", height= "800px"),#, width = "100%", height = "600px"),
-                         p("ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks;
-                           swim, swimming (physiologic hypertrophy); tac, transverse-aortic-constriction (pahtologic hypertrophy)"),
+                         p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
+                         data sets. Please refer to the table at the landing page for more information on the contrasts."),
+                         p(strong("Abbreviations:")),
+                         p("Ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
+               swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pathologic hypertrophy); PE, phenylephrine."),
+        
                          br(),
                          br(),
                          hr()
@@ -329,11 +338,15 @@ tabPanel(
                          ##Magnet
                          h3("Transcription factor activities - bulk HCM"),
                          plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
+                         p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
+                         data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          br(),
                          br(),
                          hr(),
                          h3("Transcription factor activities - single cell HCM"),
                          plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
+                         p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
+                         data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          br(),
                          br(),
                          hr()
@@ -342,6 +355,8 @@ tabPanel(
                          h3("Transcription factor activities"),
                         plotOutput("funcC_tf", width = "100%", height = "500px") %>%
                          withSpinner(),
+                        p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
+                         data sets. Please refer to the table at the landing page for more information on the contrasts."),
                         br(),
                         br(),
                         hr()
@@ -352,7 +367,7 @@ tabPanel(
           tabPanel("Conserved TFs", 
                    br(),
                    sidebarPanel(
-                     includeMarkdown("inst/query_contrasts_sidebar.md"),
+                     includeMarkdown("inst/conservedTFs_sidebar.md"),
                      br(),
                      #hr(),
                      strong("1. Select contrast(s)"),
@@ -363,7 +378,7 @@ tabPanel(
                                  multiple = T,
                                  options = list(`live-search` = TRUE,
                                                 size=10, `max-options` = 10),
-                                 selected = c("mm_TAC_RNA_2w") 
+                                 selected = c("mm_TAC_RNA_2w", "mm_TAC_ribo_2w") 
                      ),
                      
                      pickerInput(inputId = "select_contrast_hs_tf", 
@@ -371,8 +386,8 @@ tabPanel(
                                  choices = sort(df_func%>% filter(cc =="B")%>% pull(condition)%>% unique()), 
                                  multiple = T,
                                  options = list(`live-search` = TRUE,
-                                                size=10, `max-options` = 10),
-                                 selected = c("hs_HCMvsNF_snRNA_CM", "hs_HCMvsNF_RNA") 
+                                                size=10, `max-options` = 10)
+                                 #selected = c("hs_HCMvsNF_snRNA_CM", "hs_HCMvsNF_RNA") 
                      ),
                      
                      pickerInput(inputId = "select_contrast_hs2_tf", 
@@ -380,8 +395,8 @@ tabPanel(
                                  choices = df_func%>% filter(cc %in% c("C", "D"))%>% pull(condition)%>% unique(), 
                                  multiple = T,
                                  options = list(`live-search` = TRUE,
-                                                size=10, `max-options` = 10),
-                                 selected = c("hs_fetal_RNA") 
+                                                size=10, `max-options` = 10)
+                                 #selected = c("hs_fetal_RNA") 
                      ),
                      
                      actionButton(inputId = "reset_input_contrasts_tf", label = "Reset contrasts"),
@@ -407,34 +422,36 @@ tabPanel(
                      #             min = 1, max = 70,
                      #             value = 10, step= 1),
                      hr(),
-                     sliderInput("missing_prop_tf", "4. Select minimum number of contrasts to report a TF",
+                     sliderInput("missing_prop_tf", "3. Select minimum number of contrasts to report a TF",
                                  min = 1, max = 10,
                                  value = 1, step= 1),
                      br(), 
-                     strong("5. Compare contrasts!"), 
+                     strong("4. Get conserved TFs!"), 
                      br(), 
                      actionButton(inputId = "submit_contrast_tf", label="Submit",
                                   icon=icon("paper-plane")) 
                    ),
                    mainPanel(
-                     h3("Search for consistent genes"),
-                     h4("Dysregulated genes (FDR-cutoff)"),
+                     h3("Search for conserved TFs"),
+                     h4("Active TFs (FDR-cutoff)"),
                      plotOutput("cq_hist_tf")%>%withSpinner(),
-                     p("A. Barplot displays the overlap between the selected contrasts. Red indicates the number of genes for Signature generation."),
-                     p("B. Barplot displays the number of genes of the intersect left that and their directionality of the intersection of all selected contrasts, i.e. how many genes are commonly up- or down- or inconsistently (up and down) regulated."),
+                     p("A. Histogram showing the number of TFs (y-axis) that are active in differnt number of contrasts (x-axis).
+                       Blue colored bars indicate which TFs will be considered based on the selected minimum number of contrasts."),
+                     p("B. The consistency in direction of activity is shown for the considered TFs. Only consistent TFs will be considered."),
                      p(""),
                      hr(),
                      br(),
                      br(),
-                     h4("Full signature of dysregulated gene(s)"),
-                     
+                     h4("Full panel of TF(s)"),
                      plotOutput("hmap_top_tf")%>%withSpinner(),
+                     p("Heatmap showing estimated TF activities across selected contrasts. Black indicates missing values."),
                      hr(),
                      br(),
                      br(),
                      
-                     h4("Top consistently dysregulated gene(s)"),
+                     h4("Top conserved TFs"),
                      plotOutput("cq_top_tf")%>%withSpinner(),
+                     p("Boxplot with jitter points displays top conserved TFs based on mean activity scores."),
                      hr(),
                      br(),
                      br()
@@ -442,7 +459,9 @@ tabPanel(
                    ),# conserved TF panel
           tabPanel("Pathway activities", 
                    br(),
-                   sidebarPanel(),
+                   sidebarPanel(
+                     includeMarkdown("inst/pathways_sidebar.md")
+                   ),
                    mainPanel(                    
                      h3("Pathway activities"),
                      tabsetPanel(

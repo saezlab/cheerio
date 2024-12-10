@@ -154,3 +154,51 @@ p.coverag
 dev.off()
 
 
+# plots for UCK2 ----------------------------------------------------------
+
+genes_oi<- c("NPPA", "UCK2")
+sub_ranks = ranks %>%
+  filter(gene %in% genes_oi)
+
+max_rank = max(ranks$rank)
+library(ggplot2)
+
+# Improved plot
+dens <- ranks %>%
+  ggplot(aes(x = mean_t)) +
+  # Add density curve with a more distinct line style
+  stat_density(geom = "line", color = "steelblue", size = 1.2) +
+  # Highlight specific genes with a rug plot
+  geom_rug(data = sub_ranks, aes(x = mean_t), color = "darkred", size = 1.5) +
+  # Annotate the highlighted genes
+  geom_text(data = sub_ranks, aes(x = mean_t, y = 0.03, label = gene), 
+            color = "darkred", fontface = "bold", hjust = 0.5, vjust= 1, size = 4) +
+  # Classic theme with subtle gridlines
+  #theme_classic() +
+  theme(
+    panel.grid.major = element_line(color = "gray90", size = 0.2),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12)
+  ) +
+  # Adjust labels and title for clarity
+  labs(
+    #title = "Distribution of Mean T-Values Across Genes",
+    x = "Mean t-Value",
+    y = "Density"
+  )
+dens
+uck2_hw <- plot_hw_association(HW_DF, genes_oi)
+
+
+##save pdfs
+pdf("figures/uck2_hw_asso.pdf",
+    height= 3.2, width = 5)
+uck2_hw
+dev.off()
+
+##save pdfs
+pdf("figures/uck2_t_val_dit_hf.pdf",
+    height= 3.2, width = 3.5)
+dens
+dev.off()

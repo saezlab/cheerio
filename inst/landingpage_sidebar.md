@@ -28,9 +28,13 @@ Within CHEERIO we provide following services:
 <center>
 <a href="http://saezlab.org" target="_blank"><img src="../www/logo_saezlab.png" width="20%", align="center"></a>
 
+<br><br>
+
+<i class="fab fa-twitter"></i> <a href="https://twitter.com/jan_lanzer" target="_blank">@jan_lanzer</a>
+<i class="fab fa-twitter"></i> <a href="https://twitter.com/chrlshofmann" target="_blank">@chrlshofmann</a>
+<br>
 <i class="fab fa-twitter"></i> <a href="https://twitter.com/volkersmirko" target="_blank">@volkersmirko</a>
 <i class="fab fa-twitter"></i> <a href="https://twitter.com/saezlab" target="_blank">@saezlab</a>
-<i class="fab fa-twitter"></i> <a href="https://twitter.com/chrlshofmann" target="_blank">@chrlshofmann</a>
-<i class="fab fa-twitter"></i> <a href="https://twitter.com/jan_lanzer" target="_blank">@jan_lanzer</a>
 
-</center>
+</center> 
+

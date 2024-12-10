@@ -1,8 +1,21 @@
 # SERVER
 server = function(input, output, session) {
   
+output$meta_table= DT::renderDataTable({
+
+   meta_table %>%
+    DT::datatable(escape=F, filter = "top", selection = list(target = 'row+column'),
+                  extensions = "Buttons", rownames = F,
+                  option = list(scrollX = T,
+                                autoWidth = T,
+                                dom = "Bfrtip",
+                                pageLength = 25, 
+                                buttons = c("copy", "csv", "excel")))
+  })
+  
+  
 #### Query genes ####
-# to test run some function we can create a dummy input_#input= list()
+## to test run some function we can create a dummy input_#input= list()
 #input = list()
 #input$select_gene = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" ))
 #input$select_gene = toupper(c("GPC5", "COL4A1", "PCOLCE2", "EXT1"))
@@ -121,19 +134,32 @@ output$heart_weight_plot= renderPlot({
 
 #IPMC_data
 output$IPMC_table= DT::renderDataTable({
- ipmc_data %>%
-    filter(gene %in% (input$select_gene))%>%
-    select(gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
-    DT::datatable(
-      escape=F, filter = "top",
-      selection = "none",
-      extensions = "Buttons",
-      rownames = F,
-      options = list(scrollX = T,
-                     autoWidth = T,
-                     dom = "Bfrtip",
-                     buttons = c("copy", "csv", "excel","pdf"))
-      )
+  if (!is.null(input$select_gene) )  {
+    # we have to translate the gene symbols to their mouse symbol
+    # for this we can simply query our contrast df, which contains original annotations still
+    mouse_genes <- joint_contrast_df%>% 
+      filter(gene %in% input$select_gene, 
+             grepl("mm", contrast_id))%>% 
+      distinct(gene, gene_orig)%>% 
+      pull(gene_orig)
+    
+    # get IPMC data for queried genes
+    ipmc_data <- get_ipmc_data(genes = mouse_genes)
+    
+    # present as data table
+    ipmc_data %>%
+      #select(gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
+      DT::datatable(
+        escape=F, filter = "top",
+        selection = "none",
+        extensions = "Buttons",
+        rownames = F,
+        options = list(scrollX = T,
+                       autoWidth = T,
+                       dom = "Bfrtip",
+                       buttons = c("copy", "csv", "excel","pdf"))
+        )
+  }
 })
 
 ## B
@@ -562,8 +588,6 @@ output$funcA_tf= renderPlot({
   }
  })
 
-
-
 ## B
 output$funcB_tf_sc=renderPlot({
   if (!is.null(input$select_tf) ){
@@ -764,8 +788,11 @@ signature = reactive({
 gsea_res = eventReactive(input$submit, {
   if (ncol(gs()) == 1) {
     df= map(unique(signature()$contrast_id), function(x){
-      y= signature()%>% filter(contrast_id == x)
-      vect= deframe(y[,c("gene", "logFC")])
+      y= signature()%>% 
+        filter(contrast_id == x)%>%
+        mutate(effect= logFC*-log10(FDR_mod))
+      
+      vect= deframe(y[,c("gene", "effect")])
       res = fgsea(stats= vect ,
                   pathways= gs()$gene, 
                   nperm = 1000)
@@ -798,8 +825,13 @@ gsea_res = eventReactive(input$submit, {
       split(.$geneset) %>%
       map(pull, gene)
     df= map(unique(signature()$contrast_id), function(x){
-      y= signature()%>% filter(contrast_id == x)
-      vect= deframe(y[,c("gene", "logFC")])
+      #y= signature()%>% filter(contrast_id == x)
+      #vect= deframe(y[,c("gene", "logFC")])
+      y= signature()%>% 
+        filter(contrast_id == x)%>%
+        mutate(effect= logFC*-log10(FDR_mod))
+      
+      vect= deframe(y[,c("gene", "effect")])
       res = fgsea(stats= vect ,
                   pathways= list_gs, 
                   nperm = 1000)

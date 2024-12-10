@@ -12,7 +12,7 @@ ui = function(request) {
     
     navbarPage(
       id = "menu", 
-      title = div(img(src="logo_saezlab.png", width="25", height="25"),
+      title = div(img(src="logo_cheerio-removebg-preview.png", width="25", height="25"),
                   "CHEERIO"),
       windowTitle = "CHEERIO",
       collapsible=T,
@@ -25,7 +25,9 @@ ui = function(request) {
           includeMarkdown("inst/landingpage_sidebar.md")
         ),
         mainPanel(
-          includeMarkdown("inst/landingpage.md")
+          includeMarkdown("inst/landingpage.md"),
+          DT::dataTableOutput("meta_table")%>%
+            withSpinner()
         )
       ),
       

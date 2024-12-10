@@ -15,7 +15,7 @@
 library(tidyverse)
 
 
-dat= read_tsv("raw_data/pheno/IMPC/IMPC_Cardiovascular_System.tsv")
+dat= read_tsv("../cheerio_data/raw_data/pheno/IMPC/IMPC_Cardiovascular_System.tsv")
 dat
 
 impc_data = dat%>% 

@@ -148,7 +148,7 @@ get_top_consistent_gene2 <-
     # procced only if there are any consistent genes
     if(length(consistent.genes)!= 0){
       
-      # calculate the median normalized rank across contrasts,
+      # calculate the mean normalized rank across contrasts,
       # this will serve as new ranking
       # then join back to get lfc values per contrast (contrast_df_filt1)
       # as well as the assigned regulatory group (df.msign)
@@ -613,6 +613,7 @@ plot_hw_association= function(HW_DF,
                      #size= -log10(logcpm_p_value),
                      color= R2, 
                      shape= significant))+
+          geom_col(width= 0.05, color= NA, fill ="black")+
           geom_point(show.legend = T,
                      size= 3)+
           ggtitle(paste0(x))+
@@ -621,9 +622,9 @@ plot_hw_association= function(HW_DF,
                 panel.grid.minor = element_line(color = "gray90", size = 0.25)  # Minor grid lines
           )+
           geom_hline(yintercept = 0)+
-          scale_shape_manual(values = c(15, 16))+
+          scale_shape_manual(values = c(16, 17))+
           #scale_size_continuous(range = c(1, 8))+
-          scale_color_gradient(low= "grey", high= "red", limits = c(0, 1))+
+          scale_color_gradient2(low= "darkgrey", mid= "blue", high= "red", limits = c(0, 1))+
           labs(x= "", y= "Coefficient",
                shape = "", 
                color = "R²")+
@@ -750,6 +751,68 @@ make_nice_table <- function(df, color_column = NULL) {
   
   return(datatable)
 }
+
+# Function to query IMPC API for selected genes
+
+## from the data field 
+# https://www.mousephenotype.org/help/programmatic-data-access/data-fields/
+
+generate_solr_url <- function(base_url, 
+                              genes, 
+                              rows = 25,
+                              fields = c("marker_symbol", "marker_accession_id",
+                                         "mp_term_name", "zygosity", "sex", 
+                                         "p_value")
+                              ) {
+  # Check for input validity
+  if (length(genes) == 0) stop("Please provide at least one gene symbol.")
+  
+  # Construct the gene query
+  gene_query <- paste(genes, collapse = "%20OR%20")
+  
+  # Construct the field query
+  field_query <- paste(fields, collapse = ",")
+  
+  # Combine all into a full URL
+  full_url <- paste0(
+    base_url,
+    "?q=marker_symbol:(", gene_query, ")",
+    "&rows=", rows,
+    "&wt=csv&fl=", field_query
+  )
+  
+  return(full_url)
+}
+
+# process ipmc data
+get_ipmc_data <- function(genes){
+  
+  # generate query URL
+  full_url<- generate_solr_url("https://www.ebi.ac.uk/mi/impc/solr/genotype-phenotype/select",
+                               genes, rows= 1000)
+  
+  # get table format via ipmc API
+  ipmc<- read_csv(full_url)
+  #process the links in html format 
+  ipmc <- ipmc %>% 
+    mutate(jax_link= paste0("https://www.informatics.jax.org/marker/",marker_accession_id ), 
+           ipmc_link= paste0("https://www.mousephenotype.org/data/genes/", marker_accession_id ), 
+           gene = paste0("<a href='", ipmc_link,"' target='_blank'>", marker_symbol,"</a>"),
+           jax_link = paste0("<a href='", jax_link,"' target='_blank'>", "MGI_gene_detail","</a>"))
+  
+  # ordering and formatting
+  ipmc %>% 
+    mutate(Cardiac_Hypertrophy= factor(ifelse(mp_term_name %in% c("decreased heart weight", "increased heart weight"),
+                                              mp_term_name, "-")), 
+           Other_Phenotypes= factor(ifelse(Cardiac_Hypertrophy == "-", mp_term_name, "-")))%>%
+    mutate(p_value = scientific(p_value))%>%
+    select(gene,Cardiac_Hypertrophy, Other_Phenotypes, zygosity, sex, p_value, jax_link)%>%
+    arrange(desc(Cardiac_Hypertrophy))
+  
+  
+}
+
+
 
 # wrappers  ---------------------------------------------------------------
 

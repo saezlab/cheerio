@@ -18,7 +18,11 @@ joint_contrast_df <- joint_contrast_df%>%
   mutate(ranked_effect= rank(effect))%>%
   mutate(scaled_effect= scale(effect),
          norm_ranked_effect = ranked_effect/max(ranked_effect))
-  
+
+joint_contrast_df %>% 
+  filter(contrast_id =="rn_PE_ribo") %>%
+  ggplot(aes(x= norm_ranked_effect, y= gene_rank_norm))+geom_point()
+
 joint_contrast_df %>% 
   filter(contrast_id== "hs_fetal_RNA")%>%
   ggplot(aes(x= norm_ranked_effect, y= logFC))+

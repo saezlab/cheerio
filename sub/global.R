@@ -19,7 +19,6 @@ library(readr)
 library(stringr)
 library(shinycssloaders)
 #plotting: 
-
 library(plotly)
 library(cowplot)
 library(ggpmisc)
@@ -32,6 +31,18 @@ theme_set(theme_cowplot())
 
 
 # load static data
+##meta table
+meta_table <- read_csv("app_data/meta_data.csv") %>%
+  mutate(across(-`Unique samples`, factor)) %>%
+  mutate(DOI = ifelse(
+    DOI == "GSE141910", 
+    '<a href="https://www.med.upenn.edu/magnet/" target="_blank">GSE141910</a>',  # Specific link for GSE141910
+    ifelse(
+      !is.na(DOI), 
+      paste0('<a href="', DOI, '" target="_blank">', DOI, '</a>'), 
+      DOI
+    )
+  ))   # Wrap DOI values in clickable HTML links
 
 ##reheat
 contrasts_HF = readRDS("app_data/study_contrasts.rds")
@@ -41,37 +52,29 @@ directed_signature = readRDS("app_data/signature.rds")
 #example
 example_geneset = read_csv("app_data/multiple_geneset.csv", show_col_types = FALSE)
 
-#progeny:
-#prog.res= readRDS("app_data/progeny_results_all.rds")
-
-#dorothea:
-#df_tf= readRDS("app_data/dorothea_results_all.rds")
-
+# funcomics results
 df_func= readRDS("app_data/funcomics_precalc.rds")
 
 TFs <- unique(df_func%>% filter(database == "collectri")%>% pull(source))
 
-#contrast query:
-
+#contrast query (main data frame with gene level statistics from each contrast)
 joint_contrast_df= readRDS( "app_data/contrasts_query_df_translated3.rds")
 
-
-ipmc_data= readRDS("app_data/ipmc_data.rds")
-
-# heart weight data:
-
+# heart weight data (precalculated linear model results)
 HW_DF= readRDS("app_data/heart_weight_precalc.rds")
 
+
+
+# app stuff ---------------------------------------------------------------
 hcm_contrasts<- c("hs_HCMvsNF_RNA", 
                   "hs_HCMvsDCM_RNA", 
                   "hs_HCMrEFvsNF_prot",
                   "hs_HCMpEFvsNF_prot",
                   "hs_cHYPvsNF_prot"
 )
+
 contrast_ids <- joint_contrast_df$contrast_id%>% unique()
 
-
-# app stuff ---------------------------------------------------------------
 legend_lfc_plot= readRDS("app_data/legend_for_lfc_plot.rds")
 
 error_text = "Queried gene(s) were not captured\nin data"
@@ -101,15 +104,4 @@ myColors_soft <- c("#6A7D8A",  # Muted blue-gray
 myColors_full <- c(myColors_soft, myColors, myColors1)
 
 
-# -------------------------------------------------------------------------
-# ##testings:
-# example_contrasts <- c(contrast_ids[grepl("TAC", contrast_ids)],
-#                        contrast_ids[grepl("fetal", contrast_ids)],
-#                        "hs_HCMvsNF_RNA", "hs_HCMvsNF_snRNA_CM")
-# 
-# 
-# get_top_consistent_gene2(joint_contrast_df = joint_contrast_df,
-#                          query_contrasts = example_contrasts, 
-#                          missing_prop=8, 
-#                          alpha= 0.05
-#                          )
+

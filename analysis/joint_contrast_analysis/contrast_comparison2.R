@@ -685,7 +685,7 @@ gene_counts = contrast_df_filt1 %>%
   distinct(gene, contrast_id)%>%
   group_by(gene)%>%
   count()
-
+missing_prop= 6
 p.df <- gene_counts %>% 
   ungroup()%>%
   count(n)%>%
@@ -713,20 +713,59 @@ df.msign= contrast_df_filt1 %>%
   )
   )
 
-p.bar.intersect<- df.msign %>%
+plot_df <- contrast_df_filt1 %>%
+  dplyr::select(gene, contrast_id, logFC) %>%
+  filter(gene %in% intersect_genes) %>%
+  group_by(gene) %>%
+  summarise(
+    # Calculate the proportion of contrasts with positive and negative signs
+    prop_up = sum(sign(logFC) == 1) / n(),
+    prop_down = sum(sign(logFC) == -1) / n()
+  ) %>%
+  mutate(
+    top_ = factor(
+      case_when(
+        prop_up == 1 ~ "upregulated",        # All contrasts are upregulated
+        prop_down == 1 ~ "downregulated",   # All contrasts are downregulated
+        prop_up == 7/8 ~ "7/8_up",
+        prop_down == 7/8 ~ "7/8_dn",
+        prop_up == 6/8 ~ "6/8_up",
+        prop_down == 6/8 ~ "6/8_dn",
+        TRUE ~ "inconsistent"               # Mixed directions
+      ), levels = c("downregulated", 
+                    "7/8_dn",
+                    "6/8_dn", 
+                    "inconsistent",
+                    "6/8_up",
+                    "7/8_up",
+                    "upregulated"
+                    )
+    )
+  )
+
+gradient_colors <- c(
+  "blue",       # downregulated
+  "#5A7BBE",    # 7/8_dn (lighter blue)
+  "#8FAEDF",    # 6/8_dn (even lighter blue)
+  "darkgrey",   # inconsistent
+  "#E89E9E",    # 6/8_up (lighter red)
+  "#D65C5C",    # 7/8_up (darker red)
+  "red"         # upregulated
+)
+p.bar.intersect<- plot_df %>%
   count(top_)%>%
   ggplot(., aes(x = 1, y =n, fill = top_)) +
   geom_col(color="black" )+
   geom_text(aes(label = ifelse(n >= 10, n, "")), 
             position = position_stack(vjust = 0.5), # Center the labels within the bars
             color = "white") +
-  scale_fill_manual(values = rev(c("darkblue", "darkgrey", "darkred")))+
+  scale_fill_manual(values = gradient_colors)+
   theme_cowplot()+
   theme(axis.text.x = element_blank(), 
         axis.line = element_blank(), 
         axis.ticks.x = element_blank())+
   labs(x="", y="number of genes", fill ="")
-
+p.bar.intersect
 ##signature
 df.full <- p_hyp%>% left_join(df.msign, by= "gene")
 
@@ -751,7 +790,7 @@ p.pvaldist_no_label<- df.full%>%
   geom_point()+
   geom_vline(xintercept= 500,linetype=3)+
   geom_hline(yintercept = -log10(0.0001), color="black", linetype=3)+
-  scale_color_gradient2(low="darkblue", mid="white", high= "darkred")+
+  scale_color_gradient2(low="blue", mid="white", high= "red")+
   theme_cowplot()+
   xlim(c(0, max(df.full$fisher.rank)))+
   scale_x_continuous(
@@ -803,7 +842,7 @@ genes <- df.full%>%
   filter(abs(m.sign)> 0.9 & fisher.rank <500)%>%
   pull(gene)
 
-hist(df.full$m.sign, breaks = 100)
+hist(df.full$m.sign, breaks = 10)
 
 mat= c.df %>% 
   dplyr::select(contrast_id, gene,  logFC)%>%
@@ -854,13 +893,21 @@ p.pvaldist
 dev.off()
 
 pdf("figures/signature_pval_rank_nolabel.pdf",
-    width= 8, height= 3)
+    width= 8, height= 2.3)
 p.pvaldist_no_label
 dev.off()
 
 pdf("figures/signature_consistencytop500.pdf",
-    width= 2.8, height= 3)
+    width= 2.8, height= 3.2)
 p.bar.intersect
+dev.off()
+
+pdf("figures/signature_consistencytop500_horiztonal.pdf",
+    width= 6, height= 1)
+p.bar.intersect+
+  coord_flip()+
+  theme(axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank())
 dev.off()
 
 pdf("figures/signature_hmap.pdf",

@@ -1,9 +1,10 @@
-# Welcome to **CHEERIO**,
+# <img src="../www/logo_cheerio.png" width="60" style="vertical-align: middle;"> Welcome to **CHEERIO**
 > **C**ardiac **H**yp**E**rtrophy g**E**ne exp**R**ess**IO**n database
 
 ### Abstract
+**CHEERIO** (Cardiac HypErtrophy gEne expRessIOn) is an integrated resource designed to facilitate the study of gene expression in cardiac hypertrophy. It provides a comprehensive collection of data from rodent and human models, enabling researchers to explore the molecular underpinnings of cardiac hypertrophy and its progression to heart failure. The platform supports hypothesis generation and testing, offering an accessible and user-friendly interface for data analysis.
 
-We herein introduce the CHEERIO (Cardiac HypErtrophy gEne expRessIOn) database, a comprehensive analysis and resource of cardiac gene expression during hypertrophic growth, supporting researchers in elaborating, testing, and refining their hypotheses on the molecular nature of cardiac hypertrophy assisted through a free and easy-to-use web application. By integrating a comprehensive set of rodent and human samples, CHEERIO reveals the transcriptional and translational regulation of gene expression during cardiac hypertrophy, the differences between early and established physiological and pathological hypertrophy, interspecies differences, and gene expression changes potentially caused primarily by cardiac failure during pathological hypertrophy. 
+By combining diverse datasets, **CHEERIO** offers insights into the transcriptional and translational regulation of gene expression in both physiological and pathological hypertrophy. It highlights key differences between early and advanced stages of hypertrophy, and offers a detailed comparison across species. Additionally, **CHEERIO**enables the identification of gene expression changes specifically associated with cardiac failure in the context of pathological hypertrophy.
 
 ### Graphical abstract
 <p>
@@ -15,10 +16,6 @@ We herein introduce the CHEERIO (Cardiac HypErtrophy gEne expRessIOn) database, 
 
 We curated and analyzed different HCM related disease models, data modalities and biological entities that we present in this interactive database.
 
-An overview of the analyzed data is visualized here: 
-<p>
-<img src="../www/hypertrophyDB_scheme2.png" width="100%", align="middle"/>
-</p>
 
 ### Citation
-C.Hofmann, J.Lanzer, et.al., in preparation
+C. Hofmann, J. D. Lanzer, et. al., in preparation

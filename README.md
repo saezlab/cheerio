@@ -3,12 +3,6 @@
 
 # Welcome to CHEERIO
 
-<!-- badges: start -->
-
-[![Build
-Status](https://travis-ci.com/saezlab/reheat.svg?branch=master)](https://travis-ci.com/saezlab/reheat)
-<!-- badges: end -->
-
 > Cardiac Hypertrophy Transcriptome Appication
 
 ### About
@@ -23,7 +17,7 @@ This is a collaborative project with the Mirko Völkers AG, Heidelberg Universit
 There are basically three ways of how to access Cheerio:
 
   - You can access a live version running
-    [here](https://jlanzer.shinyapps.io/shiny_hypertophy/) on the server from
+    [here](https://voelkerslab.shinyapps.io/cheerio/) on the server from
     `shinyapps.io`.
 
   - You can run the app locally in an interactive R session. Before make

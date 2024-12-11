@@ -3,7 +3,6 @@ source("sub/global.R")
 source("sub/helper.R")
 ui = function(request) {
   fluidPage(
-    
     rclipboardSetup(),
     #tags$script(src = "https://kit.fontawesome.com/acea36f561.js"),
     useShinyjs(),
@@ -12,6 +11,8 @@ ui = function(request) {
     
     navbarPage(
       id = "menu", 
+      theme = shinytheme("flatly"),
+     # theme = bs_theme(preset = "Simplex"),
       title = div(img(src="logo_cheerio-removebg-preview.png", width="25", height="25"),
                   "CHEERIO"),
       windowTitle = "CHEERIO",

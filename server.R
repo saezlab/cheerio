@@ -1,6 +1,6 @@
 # SERVER
 server = function(input, output, session) {
-  
+
 output$meta_table= DT::renderDataTable({
 
    meta_table %>%

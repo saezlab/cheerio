@@ -32,9 +32,9 @@ ui = function(request) {
         )
       ),
       
-      #### Query genes ####
+      #### Query Genes ####
       tabPanel(
-        title = "Query genes",
+        title = "Query Genes",
         icon = icon("search"),
         sidebarPanel(
           includeMarkdown("inst/query_genes_sidebar.md"),
@@ -54,15 +54,15 @@ ui = function(request) {
           tabsetPanel(
             type = "tabs",
             tabPanel("A. Animal models",
-                     h3("1. Regulation in Murine Cardiac Hypertrophy models"),
+                     h3("1. Regulation in rodent cardiac hypertrophy models"),
                      h4("1.1 Gene expression regulation"),
                      plotOutput("gene_expression_plots", width = "100%", height = "600px")%>%
                        withSpinner(),#, width = "100%", height = "600px"),
                      p("Bar plots indicate log2 fold changes for different contrasts and data sets. Please refer to the table at the landing page for 
                      more information on the contrasts."),
                      p(strong("Abbreviations:")),
-                     p("Ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
-               swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pathologic hypertrophy); PE, phenylephrine."),
+                     p("mm: mouse; rn: rat; RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
+                     swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
                      
                      br(),
                      br(),
@@ -71,7 +71,8 @@ ui = function(request) {
                        withSpinner(),
                      p("Comparison of logFC values in Ribo-seq (y-axis) and RNA-seq (x-axis) for different models (A - in vitro, B - in vivo)"),
                      p(strong("Abbreviations:")),
-                     p("2d, two days; 2wk, two weeks; swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pahtologic hypertrophy); PE, phenylephrine"),
+                     p("RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
+                     swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
                      
                      br(),
                      br(),
@@ -80,7 +81,7 @@ ui = function(request) {
                      
                      #hw
                      h3("2. Phenotype associations"),
-                     h4("2.1 Gene expression association with heart weight"),
+                     h4("2.1 Gene expression association with heart weight in mice after swim or TAC"),
                      br(),
                      p(br()),
                      plotOutput("heart_weight_plot", width = "100%", height = "400px")%>%
@@ -92,8 +93,8 @@ ui = function(request) {
                      br(),
                      ##ipmc table
                     h4("2.2 Known associations of genetic variants with mouse phenotypes"),
-                    h5("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic variants and a diversity of measured phenotypes. We show whether the selected 
-                       genes are associated with any phenotypes in the IMPC data base."),
+                    h5("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic mouse models and a diversity of measured phenotypes. We show whether the selected 
+                       genes are associated with any cardiovascular phenotypes in the IMPC database. For more information, click on the gene name for a direct link to the corresponding IMPC entry or on the Jax link for the MGI site"),
                     br(),
                     DT::dataTableOutput("IPMC_table")%>%
                       withSpinner(),
@@ -105,17 +106,17 @@ ui = function(request) {
                      
                      plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px")%>%
                        withSpinner(),
-                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
+                     p("hs: human; HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
                      br(),
                      br(),
                      hr(),
                      
-                     h4("Regulation on single cell level"),
+                     h4("Regulation on single cell level (human)"),
                      #h6("Celltype regulation compared between non failing, DCM and HCM"),
                      
                      plotOutput("HF_single", height= "900px", width= "100%") %>%
                        withSpinner(),
-                     p("HCM, hypertrophic cardiomyopathy; DCM, dilated cardiomyopathy; NF, non-failing"),
+                     p("HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
                      
                      br(),
                      br(),
@@ -123,18 +124,20 @@ ui = function(request) {
                      hr()
             ),
             tabPanel("C. Human Heart Failure",
-                     h4("Regulation in bulk from human heart failure studies"),
+                     h4("Regulation in bulk transcriptomics from human heart failure studies"),
                      h6("HF bulk transcripomic studies"),
                      plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
                        withSpinner(),
                      
                      h5("Distribution of mean t-values"),
-                     h6("Mean t-values distribution of all bulk studies"),
+                     h6("Mean t-values distribution of all bulk transcriptomics studies."),
                      plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
                        withSpinner(),
+                     p("Position of a gene towards the  left indicates strong and significant downregulation across all studies compared to all other genes."),
+                     p("Position of a gene towards the right indicates strong and significant upregulation across all studies compared to all other genes."),
                      
                      h5("Ranking of queried genes"),
-                     h6("Consensus ranking, the lower the rank the more consistently is the gene regulated in human HF"),
+                     h6("Consensus ranking, the lower the rank the more consistently is the gene significantly regulated in human HF"),
                      plotlyOutput("rank_position", width = "100%", height = "125px") %>%
                        withSpinner(),
                      
@@ -149,7 +152,9 @@ ui = function(request) {
                      h3("Regulation in Fetal vs. Adult Human Hearts"),
                      plotOutput("fetal_gene_expression_plots", height= "250px"),
                      p(strong("Abbreviations:")),
-                     p("rna_fetal1, fetal study 1 (Spurell et al, 2022); rna_fetal2, fetal study 2 (Akat et al, 2014)"),
+                     p("hs: human; RNA: RNA-Seq"),
+                     p("a positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart"),
+                     p("a negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
                      
                      hr()
                      )
@@ -180,7 +185,7 @@ tabPanel(
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
-                selected = c("mm_TAC_RNA_2w") 
+                # selected = c("mm_TAC_RNA_2w") 
     ),
     
     pickerInput(inputId = "select_contrast_hs", 
@@ -193,7 +198,7 @@ tabPanel(
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
-                selected = c("hs_HCMvsNF_snRNA_CM", "hs_HCMvsNF_RNA") 
+                # selected = c("hs_HCMvsNF_snRNA_CM", "hs_HCMvsNF_RNA") 
     ),
     
     pickerInput(inputId = "select_contrast_hs2", 
@@ -205,7 +210,7 @@ tabPanel(
                 multiple = T,
                 options = list(`live-search` = TRUE,
                                size=10, `max-options` = 10),
-                selected = c("hs_fetal_RNA") 
+                # selected = c("hs_fetal_RNA") 
     ),
    
     actionButton("reset_input_contrasts", "Reset contrasts"),
@@ -238,21 +243,21 @@ tabPanel(
     h3("1. Search for consistent genes"),
     h4("1.1 Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist")%>%withSpinner(),
-    p("A. Histogram showing the number of differntially expressed genes (DEGs) (y-axis) reported by differnt number of contrasts (x-axis).
-                       Blue colored bars indicate which DEGs will be considered based on the selected minimum number of contrasts."),
-    p("B. The consistency of direction of regulation for the selected DEGs. Only consistent DEGs will be further considered."),
+    p("A. Histogram showing the number of shared differntially expressed genes (DEGs) (y-axis) reported by differnt number of contrasts (x-axis).
+                       Blue colored bars indicate which DEGs will be considered based on the selected minimum number of contrasts where a gene is significantly regulated."),
+    p("B. The consistency of direction of regulation for the selected DEGs. Only consistent DEGs will be further considered. A gene is considered consistent if all datasets where a gene is significantly regulated show the same directionality (up- or downregulated)."),
     hr(),
     br(),
     br(),
-    h4("1.2 Full signature of dysregulated gene(s)"),
+    h4("1.2 Full signature of consistently regulated genes"),
     
     plotOutput("hmap_top")%>% withSpinner(),
-    p("Heatmap displaying the full signature of consistently regulated genes."),
+    p("Heatmap displaying the full signature of consistently regulated genes. A black square indicates that the gene was not detected in the respective dataset."),
     hr(),
     br(),
     br(),
     
-    h4("1.3 Top consistently dysregulated gene(s)"),
+    h4("1.3 Top consistently up- and downregulated genes"),
     plotOutput("cq_top")%>%withSpinner(),
     p("Boxplots display top upregulated (top panel) and downregulated (bottom panel) genes from the generated signature."),
     hr(),
@@ -261,7 +266,7 @@ tabPanel(
     h3("2. Characterize the shared gene signature"),
     br(),
     h5("You can now explore functional annotations of the up or downregulated genes!"),
-    p("1.1 Click one of the buttons to copy genes into your clipboard."),
+    p("1.1 Click one of the buttons to copy the up- or downregulated genes into your clipboard."),
        br(),
     fluidRow(
       uiOutput("clipup",  style = 'display: inline-block;margin-left: 15px;' ),
@@ -315,7 +320,7 @@ tabPanel(
                       multiple = T,
                       options = list(`live-search` = TRUE,
                                      size=6, `max-options` = 6),
-                      selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
+                      # selected = c("GATA4", "GATA3", "HIF1A", "HIF1B")
                       ),
               actionButton("reset_input_TF", "Reset TFs")
               ),
@@ -328,8 +333,8 @@ tabPanel(
                          p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          p(strong("Abbreviations:")),
-                         p("Ribo, Ribo-seq (translational regulation); rna, RNA-seq (transcriptional regulation); 2d, two days; 2wk, two weeks; 
-               swim, swimming (physiologic hypertrophy); TAC, transverse-aortic-constriction (pathologic hypertrophy); PE, phenylephrine."),
+                         p("mm: mouse; rn: rat; RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
+                     swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
         
                          br(),
                          br(),
@@ -337,17 +342,21 @@ tabPanel(
                          ),
                 tabPanel("B. Human Hypertrophic Cardiomyopathy",
                          ##Magnet
-                         h3("Transcription factor activities - bulk HCM"),
+                         h3("Estimated transcription factor activities - bulk transcriptomics HCM"),
                          plotOutput("funcB_tf_bulk", width = "100%", height = "500px"),
                          p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
+                         p(strong("Abbreviations:")),
+                         p("hs: human; HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
                          br(),
                          br(),
                          hr(),
-                         h3("Transcription factor activities - single cell HCM"),
+                         h3("Estimated transcription factor activities - single cell transcriptomics HCM"),
                          plotOutput("funcB_tf_sc", width = "100%", height = "500px"),
                          p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
+                         p(strong("Abbreviations:")),
+                         p("HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
                          br(),
                          br(),
                          hr()
@@ -356,8 +365,11 @@ tabPanel(
                          h3("Transcription factor activities"),
                         plotOutput("funcC_tf", width = "100%", height = "500px") %>%
                          withSpinner(),
-                        p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
+                         p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
+                         p("Fetal: a positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart, a negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
+                         p(strong("Abbreviations:")),
+                         p("hs: human; HF: heart failure; NF: non-failing healthy heart; RNA: RNA-Seq"),
                         br(),
                         br(),
                         hr()
@@ -379,7 +391,7 @@ tabPanel(
                                  multiple = T,
                                  options = list(`live-search` = TRUE,
                                                 size=10, `max-options` = 10),
-                                 selected = c("mm_TAC_RNA_2w", "mm_TAC_ribo_2w") 
+                                #selected = c("mm_TAC_RNA_2w", "mm_TAC_ribo_2w") 
                      ),
                      
                      pickerInput(inputId = "select_contrast_hs_tf", 
@@ -436,9 +448,9 @@ tabPanel(
                      h3("Search for conserved TFs"),
                      h4("Active TFs (FDR-cutoff)"),
                      plotOutput("cq_hist_tf")%>%withSpinner(),
-                     p("A. Histogram showing the number of TFs (y-axis) that are active in differnt number of contrasts (x-axis).
-                       Blue colored bars indicate which TFs will be considered based on the selected minimum number of contrasts."),
-                     p("B. The consistency in direction of activity is shown for the considered TFs. Only consistent TFs will be considered."),
+                    p("A. Histogram showing the number of shared estimated transcription factors activity (y-axis) reported by differnt number of contrasts (x-axis).
+                       Blue colored bars indicate which transcription factors will be considered based on the selected minimum number of contrasts."),
+                     p("B. The consistency in direction of activity is shown for the considered TFs. Only consistent TFs will be further considered. A TF is considered consistent if all datasets where a TF is estimated to be significantly regulated show the same directionality (up- or downregulated)."),
                      p(""),
                      hr(),
                      br(),
@@ -480,7 +492,7 @@ tabPanel(
 
       #### Input data ####
       tabPanel(
-        title = "Enrichment analysis",
+        title = "Enrichment Analysis",
         icon = icon("file-upload"),
         sidebarPanel(
           includeMarkdown("inst/input_data_sidebar.md"),
@@ -515,7 +527,7 @@ tabPanel(
       
       #### Download Center ####
       tabPanel(
-        title = "Acess Data",
+        title = "Access Data",
         icon = icon("table"),
         sidebarPanel(
           includeMarkdown("inst/meta_analysis_results_sidebar.md")
@@ -537,7 +549,7 @@ tabPanel(
            ),
           br(), 
           hr(),
-          h4("How to acess full data"),
+          h4("How to access full data"),
           br(),
           p("We provide a full data set of contrasts to be downloaded
             from Zenodo. LINK"),

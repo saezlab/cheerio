@@ -1,17 +1,21 @@
 #### Gene Query
 
-<br>Select genes of interest below to explore their role in caridac hypertrophy.</br>
-
+<br>Select genes of interest by typing the gene name(s) in the search bar below to explore their regulation in cardiac hypertrophy.</br>
 
 For a better overview, the data is divided into different functionally related groups.
 Select one of the following categories by clicking on the headings at the top:
 
 
-- **A. Animal Models** Murine pathologic and physiologic cardiac hypertrophy (bulk transcriptomics); in vitro cardiomycote hypertrophy model (bulk transcriptomics)
+- **A. Animal Models**
+In vivo mouse pathologic and physiologic cardiac hypertrophy (bulk transcriptomics, cardiomyocyte-specific translatomics and proteomics);
+in vitro PE-induced cardiomycote hypertrophy model (bulk transcriptomics, translatomics, proteomics)
 
-- **B. Human Hypertrophic Cardiomyopathy** Transcriptome Human HCM on bulk and single cell lebel
+- **B. Human Cardiac Hypertrophy**
+Human cardiac hypertrophy transcriptomics on bulk and single cell level and proteomics
 
-- **C. Human heart failure** bulk RNAseq, we use ReHeaT, an assembly of 16 heart failure studies
+- **C. Human heart failure**
+Bulk RNAseq from DCM and ICM patients. We use ReHeaT, an assembly of 16 heart failure studies.
 
-- **D. Fetal Gene Program** bulk RNAseq, two fetal studies compared fetal to healthy adult hearts
+- **D. Fetal Gene Program**
+Bulk RNAseq, comparing fetal to adult healthy hearts
 

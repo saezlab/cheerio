@@ -1,3 +1,5 @@
+Please select Query TFs, Conserved TFs or Pathway activies from the selection above
+
 #### Query estimated transcription factor activities
 
 We estimated transcription factor (TF) activities with gene regulatory networks from [CollecTRI](https://github.com/saezlab/CollecTRI) using 

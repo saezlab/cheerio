@@ -100,7 +100,7 @@ ui = function(request) {
                       withSpinner(),
                    hr()
                      ),
-            tabPanel("B. Human Hypertrophic Cardiomyopathy", 
+            tabPanel("B. Human Cardiac Hypertrophy", 
                      ##Magnet
                      h4("Regulation on bulk level"),
                      
@@ -124,8 +124,8 @@ ui = function(request) {
                      hr()
             ),
             tabPanel("C. Human Heart Failure",
-                     h4("Regulation in bulk transcriptomics from human heart failure studies"),
-                     h6("HF bulk transcripomic studies"),
+                     h4("Regulation in bulk transcriptomics from human heart failure studies (DCM and ICM patients)"),
+                     h6("Heart failure bulk transcriptomic studies"),
                      plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
                        withSpinner(),
                      

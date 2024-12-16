@@ -3,25 +3,24 @@
 
 # Welcome to CHEERIO
 
-> Cardiac Hypertrophy Transcriptome Appication
+> Cardiac HypErtrophy gEne expRessIOn database
 
 ### About
 
-CHEERIO (Cardiac HypErtrophy gEne expRessIOn) database is a comprehensive resource of cardiac gene expression during hypertrophic growth, supporting researchers in elaborating, testing, and refining their hypotheses on the molecular nature of cardiac hypertrophy assisted through a free and easy-to-use web application. 
+CHEERIO (Cardiac HypErtrophy gEne expRessIOn) is an integrated resource designed to facilitate the study of gene expression in cardiac hypertrophy. It provides a comprehensive collection of data from rodent and human models, enabling researchers to explore gene regulation during cardiac hypertrophy and heart failure. The platform supports hypothesis generation and testing, offering an accessible and user-friendly interface for data analysis.
 
-This is a collaborative project with the Mirko Völkers AG, Heidelberg University. 
-
+By combining various datasets, CHEERIO provides insights into the regulation of the transcriptome, translatome and proteome in both physiological and pathological hypertrophy. It highlights key differences between early and advanced stages of cardiac hypertrophy, and offers a detailed comparison across species. Additionally, CHEERIO enables the identification of gene expression changes specifically associated with cardiac failure in the context of pathological hypertrophy.
 
 ### How to access
 
-There are basically three ways of how to access Cheerio:
+There are three ways to access CHEERIO:
 
   - You can access a live version running
     [here](https://voelkerslab.shinyapps.io/cheerio/) on the server from
     `shinyapps.io`.
 
-  - You can run the app locally in an interactive R session. Before make
-    sure you have all packages installed listed in
+  - You can run the application locally in an interactive R session.
+    Ensure beforehand that you have installed all packages listed in
     [`sub/global.R`](https://github.com/saezlab/cheerio/sub/global.R).
 
 <!-- end list -->

@@ -176,7 +176,7 @@ tabPanel(
     strong("1. Select contrast(s)"),
     br(), 
     pickerInput(inputId = "select_contrast_mm", 
-                label = "A) Animal studies:",
+                label = "A) Animal Models:",
                 choices = joint_contrast_df%>% 
                   filter(cc =="A")%>% 
                   arrange(contrast_id)%>%
@@ -189,7 +189,7 @@ tabPanel(
     ),
     
     pickerInput(inputId = "select_contrast_hs", 
-                label = "B) Human HCM studies:",
+                label = "B) Human Cardiac Hypertrophy:",
                 choices = joint_contrast_df%>% 
                   filter(cc =="B")%>%
                   arrange(contrast_id)%>%
@@ -202,7 +202,7 @@ tabPanel(
     ),
     
     pickerInput(inputId = "select_contrast_hs2", 
-                label = "C+D) Human HF or fetal gene program",
+                label = "C+D) Human Heart Failure and Fetal Gene Program",
                 choices = joint_contrast_df%>% 
                   filter(cc %in% c("C", "D"))%>%
                   arrange(contrast_id)%>%

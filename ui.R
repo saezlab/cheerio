@@ -309,7 +309,7 @@ tabPanel(
         icon = icon("chart-line"),
         tabsetPanel(
           type = "tabs",
-          tabPanel("Query a TF", 
+          tabPanel("Query TFs", 
                    br(),
             sidebarPanel(
               includeMarkdown("inst/functional_analysis_sidebar.md"),

@@ -247,7 +247,7 @@ tabPanel(
     h3("1. Search for consistent genes"),
     h4("1.1 Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist")%>%withSpinner(),
-    p("A. Histogram showing the number of shared differntially expressed genes (DEGs) (y-axis) reported by differnt number of contrasts (x-axis).
+    p("A. Histogram showing the number of shared differentially expressed genes (DEGs) (y-axis) reported by different number of contrasts (x-axis).
                        Blue colored bars indicate which DEGs will be considered based on the selected minimum number of contrasts where a gene is significantly regulated."),
     p("B. The consistency of direction of regulation for the selected DEGs. Only consistent DEGs will be further considered. A gene is considered consistent if all datasets where a gene is significantly regulated show the same directionality (up- or downregulated)."),
     hr(),

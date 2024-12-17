@@ -1,6 +1,6 @@
 #### Generate Custom Signature
 
-<br>Select contrasts of interest from the drop-down menues below to generate a signature of consistently up- or downregulated genes.</br>
+<br>Select contrasts of interest from the drop-down menues below and click on the SUBMIT button to generate a signature of consistently up- or downregulated genes.</br>
 
 
 Datasets are functionally grouped in **A. Animal models, B. Human Cardiac Hypertrophy, C+D. Human Heart Failure and Fetal Gene Program**.

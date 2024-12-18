@@ -53,7 +53,7 @@ ui = function(request) {
         mainPanel(
           tabsetPanel(
             type = "tabs",
-            tabPanel("A. Animal models",
+            tabPanel("A. Animal Models",
                      h3("1. Regulation in rodent cardiac hypertrophy models"),
                      h4("1.1 Gene expression regulation"),
                      plotOutput("gene_expression_plots", width = "100%", height = "600px")%>%
@@ -69,7 +69,7 @@ ui = function(request) {
                      h4("1.2  Ribo-seq and RNA-seq correlation"),
                      plotOutput("cardiac_hyper_corr")%>%
                        withSpinner(),
-                     p("Comparison of logFC values in Ribo-seq (y-axis) and RNA-seq (x-axis) for different models (A - in vitro, B - in vivo)"),
+                     p("Comparison of log2 fold change values in Ribo-seq (y-axis) and RNA-seq (x-axis) for different models (A - in vitro, B - in vivo)."),
                      p(strong("Abbreviations:")),
                      p("RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
                      swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
@@ -93,7 +93,7 @@ ui = function(request) {
                      br(),
                      ##ipmc table
                     h4("2.2 Known associations of genetic variants with mouse phenotypes"),
-                    h5("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic mouse models and a diversity of measured phenotypes. We show whether the selected 
+                    p("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic mouse models and a diversity of measured phenotypes. We show whether the selected 
                        genes are associated with any cardiovascular phenotypes in the IMPC database. For more information, click on the gene name for a direct link to the corresponding IMPC entry or on the Jax link for the MGI site"),
                     br(),
                     DT::dataTableOutput("IPMC_table")%>%
@@ -106,7 +106,8 @@ ui = function(request) {
                      
                      plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px")%>%
                        withSpinner(),
-                     p("hs: human; HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
+                     p(strong("Abbreviations:")),
+                     p("hs: human; RNA: RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
                      br(),
                      br(),
                      hr(),
@@ -116,7 +117,8 @@ ui = function(request) {
                      
                      plotOutput("HF_single", height= "900px", width= "100%") %>%
                        withSpinner(),
-                     p("HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
+                     p(strong("Abbreviations:")),
+                     p("hs: human; snRNA: single nuclear RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
                      
                      br(),
                      br(),
@@ -128,14 +130,16 @@ ui = function(request) {
                      h6("Heart failure bulk transcriptomic studies"),
                      plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
                        withSpinner(),
-                     
+
+                     br(),
                      h5("Distribution of mean t-values"),
                      h6("Mean t-values distribution of all bulk transcriptomics studies."),
                      plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
                        withSpinner(),
                      p("Position of a gene towards the  left indicates strong and significant downregulation across all studies compared to all other genes."),
                      p("Position of a gene towards the right indicates strong and significant upregulation across all studies compared to all other genes."),
-                     
+
+                     br(),
                      h5("Ranking of queried genes"),
                      h6("Consensus ranking, the lower the rank the more consistently is the gene significantly regulated in human HF"),
                      plotlyOutput("rank_position", width = "100%", height = "125px") %>%
@@ -148,13 +152,13 @@ ui = function(request) {
                      
                     
                      ),
-            tabPanel("D. Fetal gene program", 
+            tabPanel("D. Fetal Gene Program", 
                      h3("Regulation in Fetal vs. Adult Human Hearts"),
                      plotOutput("fetal_gene_expression_plots", height= "250px"),
                      p(strong("Abbreviations:")),
                      p("hs: human; RNA: RNA-Seq"),
-                     p("a positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart"),
-                     p("a negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
+                     p("A positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart"),
+                     p("A negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
                      
                      hr()
                      )
@@ -243,7 +247,7 @@ tabPanel(
     h3("1. Search for consistent genes"),
     h4("1.1 Dysregulated genes (FDR-cutoff)"),
     plotOutput("cq_hist")%>%withSpinner(),
-    p("A. Histogram showing the number of shared differntially expressed genes (DEGs) (y-axis) reported by differnt number of contrasts (x-axis).
+    p("A. Histogram showing the number of shared differentially expressed genes (DEGs) (y-axis) reported by different number of contrasts (x-axis).
                        Blue colored bars indicate which DEGs will be considered based on the selected minimum number of contrasts where a gene is significantly regulated."),
     p("B. The consistency of direction of regulation for the selected DEGs. Only consistent DEGs will be further considered. A gene is considered consistent if all datasets where a gene is significantly regulated show the same directionality (up- or downregulated)."),
     hr(),
@@ -253,6 +257,9 @@ tabPanel(
     
     plotOutput("hmap_top")%>% withSpinner(),
     p("Heatmap displaying the full signature of consistently regulated genes. A black square indicates that the gene was not detected in the respective dataset."),
+    p(strong("Abbreviations:")),
+    p("hs: human; mm: mouse; rn: rat; RNA: RNA-seq; snRNA: single nuclear RNA-Seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); prot: Proteome (mass spectrometry); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte; 2d: two days; 2wk: two weeks; 
+    swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
     hr(),
     br(),
     br(),
@@ -260,12 +267,15 @@ tabPanel(
     h4("1.3 Top consistently up- and downregulated genes"),
     plotOutput("cq_top")%>%withSpinner(),
     p("Boxplots display top upregulated (top panel) and downregulated (bottom panel) genes from the generated signature."),
+    p(strong("Abbreviations:")),
+    p("hs: human; mm: mouse; rn: rat; RNA: RNA-seq; snRNA: single nuclear RNA-Seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); prot: Proteome (mass spectrometry); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte; 2d: two days; 2wk: two weeks; 
+    swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
     hr(),
     br(),
     br(),
     h3("2. Characterize the shared gene signature"),
     br(),
-    h5("You can now explore functional annotations of the up or downregulated genes!"),
+    h5("You can now explore functional annotations of the up- or downregulated genes!"),
     p("1.1 Click one of the buttons to copy the up- or downregulated genes into your clipboard."),
        br(),
     fluidRow(
@@ -347,7 +357,7 @@ tabPanel(
                          p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          p(strong("Abbreviations:")),
-                         p("hs: human; HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
+                         p("hs: human; RNA: RNA-Seq (transcriptional regulation), prot: Proteomics (mass spectrometry); HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
                          br(),
                          br(),
                          hr(),
@@ -356,7 +366,7 @@ tabPanel(
                          p("Bar plots indicate TF activties (ulm scores, see decoupleR) for different contrasts and 
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          p(strong("Abbreviations:")),
-                         p("HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
+                         p("hs: human; snRNA: single nuclear RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
                          br(),
                          br(),
                          hr()
@@ -369,7 +379,7 @@ tabPanel(
                          data sets. Please refer to the table at the landing page for more information on the contrasts."),
                          p("Fetal: a positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart, a negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
                          p(strong("Abbreviations:")),
-                         p("hs: human; HF: heart failure; NF: non-failing healthy heart; RNA: RNA-Seq"),
+                         p("hs: human; HF: heart failure; NF: non-failing healthy heart; RNA: RNA-Seq (transcriptional regulation)"),
                         br(),
                         br(),
                         hr()
@@ -533,6 +543,12 @@ tabPanel(
           includeMarkdown("inst/meta_analysis_results_sidebar.md")
         ),
         mainPanel(
+          h4("How to access full data"),
+          br(),
+          p("We provide a full data set of contrasts to be downloaded
+            from Zenodo. LINK"),
+          p("You can download the .zip file and access the processed data"),
+          br(),
           h4("Query data in a convenient table format"),
           h6("Select your desired contrasts, sort and filter data in table format"),
           tabsetPanel(
@@ -548,14 +564,8 @@ tabPanel(
                      )
            ),
           br(), 
-          hr(),
-          h4("How to access full data"),
-          br(),
-          p("We provide a full data set of contrasts to be downloaded
-            from Zenodo. LINK"),
-          p("You can download the .zip file and access the processed data")
-          
-          
+          hr()
+        
         )
       )
       

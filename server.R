@@ -19,6 +19,7 @@ output$meta_table= DT::renderDataTable({
 #input = list()
 #input$select_gene = toupper(c("Nppb", "Nppa", "Mybpc3", "Col1a1", "Myh7", "Myh6" ))
 #input$select_gene = toupper(c("GPC5", "COL4A1", "PCOLCE2", "EXT1"))
+#input$select_gene= c("TPT1", "GPC5")
 ## reset the gene input button:
 observeEvent(input$reset_input, {
     updatePickerInput(session,
@@ -95,7 +96,8 @@ output$gene_expression_plots = renderPlot({
           annotate("text", x = 4, y = 25, size=6, label = error_text2)+
           theme_void()
         return(
-          list("p"= p, "leg"= NA)
+          #list("p"= p, "leg"= NA)
+          p
         )
       }else{
           return(
@@ -143,22 +145,27 @@ output$IPMC_table= DT::renderDataTable({
       distinct(gene, gene_orig)%>% 
       pull(gene_orig)
     
-    # get IPMC data for queried genes
-    ipmc_data <- get_ipmc_data(genes = mouse_genes)
-    
-    # present as data table
-    ipmc_data %>%
-      #select(gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
-      DT::datatable(
-        escape=F, filter = "top",
-        selection = "none",
-        extensions = "Buttons",
-        rownames = F,
-        options = list(scrollX = T,
-                       autoWidth = T,
-                       dom = "Bfrtip",
-                       buttons = c("copy", "csv", "excel","pdf"))
-        )
+    if(length(mouse_genes) != 0){
+      
+      # get IPMC data for queried genes
+      ipmc_data <- get_ipmc_data(genes = mouse_genes)
+      
+      # present as data table
+      ipmc_data %>%
+        #select(gene, Allele, Cardiac_Hypertrophy, Other_Phenotypes,median_p_val, IPMC_link)%>%
+        DT::datatable(
+          escape=F, filter = "top",
+          selection = "none",
+          extensions = "Buttons",
+          rownames = F,
+          options = list(scrollX = T,
+                         autoWidth = T,
+                         dom = "Bfrtip",
+                         buttons = c("copy", "csv", "excel","pdf"))
+          )
+    }else{
+      return(NULL)
+    }
   }
 })
 

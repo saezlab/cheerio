@@ -554,8 +554,8 @@ plot_logfc_gene = function(red_contrast_df,
     }
     p1
 
-  }
   
+  }
   return(p1)
 }
 

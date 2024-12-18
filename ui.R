@@ -11,7 +11,7 @@ ui = function(request) {
     
     navbarPage(
       id = "menu", 
-      theme = shinytheme("flatly"),
+      theme = shinytheme("paper"),
      # theme = bs_theme(preset = "Simplex"),
       title = div(img(src="logo_cheerio-removebg-preview.png", width="25", height="25"),
                   "CHEERIO"),

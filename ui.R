@@ -8,7 +8,15 @@ ui = function(request) {
     useShinyjs(),
     # HTML("<script src='https://cdn.drugst.one/latest/drugstone.js'></script>",
     #      "<link rel='stylesheet' href='https://cdn.drugst.one/latest/styles.css'>"),
-    
+    # Add custom CSS to increase font size
+    tags$style(HTML("
+      body {
+        font-size: 1.5em; /* Increase font size by 10% */
+      }
+      .navbar {
+        font-size: 1.2em; /* Adjust navbar font size */
+      }
+    ")),
     navbarPage(
       id = "menu", 
       theme = shinytheme("paper"),

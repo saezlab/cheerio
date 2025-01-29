@@ -11,6 +11,12 @@ CHEERIO (Cardiac HypErtrophy gEne expRessIOn) is an integrated resource designed
 
 By combining various datasets, CHEERIO provides insights into the regulation of the transcriptome, translatome and proteome in both physiological and pathological hypertrophy. It highlights key differences between early and advanced stages of cardiac hypertrophy, and offers a detailed comparison across species. Additionally, CHEERIO enables the identification of gene expression changes specifically associated with cardiac failure in the context of pathological hypertrophy.
 
+### How to cite
+
+A cross-species multimodal database of gene expression in cardiac hypertrophy
+Christoph Sandmann, Jan Lanzer, Frank Stein, Ellen Malovrh, Nicholas Rudinger, Norbert Frey, Julio Saez Rodriguez, Mirko Volkers
+bioRxiv 2025.01.27.635074; doi: https://doi.org/10.1101/2025.01.27.635074 
+
 ### How to access
 
 There are three ways to access CHEERIO:

@@ -64,6 +64,12 @@ count_df <- c.df2 %>%
   arrange(cc, contrast_id)
   #mutate(contrast_id = factor(contrast_id, levels = ordered_contrast_ids)) # Set order based on clustering
 
+#stats for paper: 
+range(count_df$num_genes)
+median((count_df$num_genes))
+IQR(count_df$num_genes)
+quantile(count_df$num_genes)
+count_df %>% filter(grepl("prot", contrast_id))
 # Bar plot displaying the number of genes with FDR < 0.05
 bar_plot <- ggplot(count_df, aes(x = contrast_id, y = num_genes)) +
   theme_cowplot() +

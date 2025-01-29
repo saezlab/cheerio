@@ -279,6 +279,18 @@ cs_res$corr.matrix%>%
   write_csv("analysis/joint_contrast_analysis/correlation_matrix_all.csv")
 dim(cs_res$lfc_mtx)
 
+# for the paper get stats
+diag(cs_res$corr.matrix) = 0
+range(cs_res$corr.matrix)
+mean(cs_res$corr.matrix)
+swim_ids= rownames(cs_res$corr.matrix)[grepl("swim", rownames(cs_res$corr.matrix))]
+
+swim_corr <- cs_res$corr.matrix[c( "mm_swim_prot_2w"),
+                                c("mm_swim_ribo_2d", "mm_swim_ribo_2w", 
+                                  "mm_swim_RNA_2d", "mm_swim_RNA_2w")]
+mean(swim_corr)
+tac_ids= rownames(cs_res$corr.matrix)[grepl("tac", rownames(cs_res$corr.matrix))]
+
 pdf("figures/corr_hmap_cross_species.pdf",
     width= 8.2, height= 8.5)
 cs_res$p.hmap

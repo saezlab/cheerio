@@ -19,7 +19,10 @@ We curated and analyzed different cardiac hypertrophy related disease models, da
 
 ### Citation
 
-C. Sandmann, J. D. Lanzer, et. al., in preparation
+
+A cross-species multimodal database of gene expression in cardiac hypertrophy\
+Christoph Sandmann, Jan Lanzer, Frank Stein, Ellen Malovrh, Nicholas Rudinger, Norbert Frey, Julio Saez Rodriguez, Mirko Volkers
+bioRxiv 2025.01.27.635074; doi: https://doi.org/10.1101/2025.01.27.635074 
 
 ### Data Overview
 

@@ -58,125 +58,73 @@ ui = function(request) {
           actionButton("reset_input", "Reset genes")
   
         ),
-        mainPanel(
-          tabsetPanel(
-            type = "tabs",
-            tabPanel("A. Animal Models",
-                     h3("1. Regulation in rodent cardiac hypertrophy models"),
-                     h4("1.1 Gene expression regulation"),
-                     plotOutput("gene_expression_plots", width = "100%", height = "600px")%>%
-                       withSpinner(),#, width = "100%", height = "600px"),
-                     p("Bar plots indicate log2 fold changes for different contrasts and data sets. Please refer to the table at the landing page for 
-                     more information on the contrasts."),
-                     p(strong("Abbreviations:")),
-                     p("mm: mouse; rn: rat; RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
-                     swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
-                     
-                     br(),
-                     br(),
-                     h4("1.2  Ribo-seq and RNA-seq correlation"),
-                     plotOutput("cardiac_hyper_corr")%>%
-                       withSpinner(),
-                     p("Comparison of log2 fold change values in Ribo-seq (y-axis) and RNA-seq (x-axis) for different models (A - in vitro, B - in vivo)."),
-                     p(strong("Abbreviations:")),
-                     p("RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; 
-                     swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
-                     
-                     br(),
-                     br(),
-                     br(),
-                     hr(),
-                     
-                     #hw
-                     h3("2. Phenotype associations"),
-                     h4("2.1 Gene expression association with heart weight in mice after swim or TAC"),
-                     br(),
-                     p(br()),
-                     plotOutput("heart_weight_plot", width = "100%", height = "400px")%>%
-                       withSpinner(),
-                     p("Univariate Linear models are used to describe the association between gene expression and normalized heart weight.
-                        The model (normalized heart weight ~ b0 + b1 gene expression) was fit for each gene (panels) and contrast (x-axis).
-                       The coefficient of gene expression is displayed (y-axis), while the shape indicates whether the p-value of the coefficent was significant (p-value <0.05, triangle) or not (p-value > 0.05, circle). 
-                       The color indicates the R² of the model."), 
-                     br(),
-                     ##ipmc table
-                    h4("2.2 Known associations of genetic variants with mouse phenotypes"),
-                    p("The IMPC (International Mouse Phenotyping Consortium) gathers data on genetic mouse models and a diversity of measured phenotypes. We show whether the selected 
-                       genes are associated with any cardiovascular phenotypes in the IMPC database. For more information, click on the gene name for a direct link to the corresponding IMPC entry or on the Jax link for the MGI site"),
-                    br(),
-                    DT::dataTableOutput("IPMC_table")%>%
-                      withSpinner(),
+      
+      mainPanel(
+        tabsetPanel(
+          type = "tabs",
+          tabPanel("A. Animal Models",
+                   h3("1. Gene Regulation in Rodent Cardiac Hypertrophy Models"),
+                   h4("1.1 Gene Expression Regulation"),
+                   plotOutput("gene_expression_plots", width = "100%", height = "600px") %>% withSpinner(),
+                   p("Bar plots indicate log2 fold changes for different contrasts and datasets. Please refer to the table on the landing page for more information on the contrasts."),
+                   p(strong("Abbreviations:")),
+                   p("mm: mouse; rn: rat; RNA: RNA-seq (transcriptional regulation); ribo: Ribo-seq (translational regulation); 2d: two days; 2wk: two weeks; swim: swimming (physiologic hypertrophy); TAC: transverse-aortic-constriction (pathologic hypertrophy); PE: Phenylephrine"),
+                   br(),
+                   h4("1.2 Ribo-seq and RNA-seq Correlation"),
+                   plotOutput("cardiac_hyper_corr") %>% withSpinner(),
+                   p("Comparison of log2 fold change values between Ribo-seq (y-axis) and RNA-seq (x-axis) across different models (A - in vitro, B - in vivo)."),
+                   br(),
+                   h3("2. Phenotype Associations"),
+                   h4("2.1 Association of Gene Expression with Heart Weight in Mice"),
+                   plotOutput("heart_weight_plot", width = "100%", height = "400px") %>% withSpinner(),
+                   p("Univariate linear models describe the association between gene expression and normalized heart weight. The model (normalized heart weight ~ b0 + b1 * gene expression) was fit for each gene (panels) and contrast (x-axis). The coefficient of gene expression is displayed (y-axis). Shape indicates significance (triangle: p-value < 0.05; circle: p-value > 0.05), and color represents the model's R²."),
+                   br(),
+                   h4("2.2 Known Genetic Associations with Mouse Phenotypes"),
+                   p("The International Mouse Phenotyping Consortium (IMPC) provides data on genetic mouse models and measured phenotypes. This table highlights whether the selected genes are associated with cardiovascular phenotypes. Click gene names for direct links to corresponding IMPC entries or Jax links for MGI data."),
+                   DT::dataTableOutput("IPMC_table") %>% withSpinner(),
                    hr()
-                     ),
-            tabPanel("B. Human Cardiac Hypertrophy", 
-                     ##Magnet
-                     h4("Regulation on bulk level"),
-                     
-                     plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px")%>%
-                       withSpinner(),
-                     p(strong("Abbreviations:")),
-                     p("hs: human; RNA: RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; HCMrEF: hypertrophic cardiomyopathy with reduced ejection fraction; HCMpEF: hypertrophic cardiomyopathy with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
-                     br(),
-                     br(),
-                     hr(),
-                     
-                     h4("Regulation on single cell level (human)"),
-                     #h6("Celltype regulation compared between non failing, DCM and HCM"),
-                     
-                     plotOutput("HF_single", height= "900px", width= "100%") %>%
-                       withSpinner(),
-                     p(strong("Abbreviations:")),
-                     p("hs: human; snRNA: single nuclear RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard ; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
-                     
-                     br(),
-                     br(),
-                     br(),
-                     hr()
-            ),
-            tabPanel("C. Human Heart Failure",
-                     h4("Regulation in bulk transcriptomics from human heart failure studies (DCM and ICM patients)"),
-                     h6("Heart failure bulk transcriptomic studies"),
-                     plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>%
-                       withSpinner(),
-
-                     br(),
-                     h5("Distribution of mean t-values"),
-                     h6("Mean t-values distribution of all bulk transcriptomics studies."),
-                     plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>%
-                       withSpinner(),
-                     p("Position of a gene towards the  left indicates strong and significant downregulation across all studies compared to all other genes."),
-                     p("Position of a gene towards the right indicates strong and significant upregulation across all studies compared to all other genes."),
-
-                     br(),
-                     h5("Ranking of queried genes"),
-                     h6("Consensus ranking, the lower the rank the more consistently is the gene significantly regulated in human HF"),
-                     plotlyOutput("rank_position", width = "100%", height = "125px") %>%
-                       withSpinner(),
-                     
-                     br(),
-                     br(),
-                     br(),
-                     hr(),
-                     
-                    
-                     ),
-            tabPanel("D. Fetal Gene Program", 
-                     h3("Regulation in Fetal vs. Adult Human Hearts"),
-                     plotOutput("fetal_gene_expression_plots", height= "250px"),
-                     p(strong("Abbreviations:")),
-                     p("hs: human; RNA: RNA-Seq"),
-                     p("A positive logFC indicates that the gene is higher expressed in the fetal human heart compared to the adult human heart"),
-                     p("A negative logFC indicates that the gene is lower expressed in the fetal human heart compared to the adult human heart"),
-                     
-                     hr()
-                     )
-            )
+          ),
+          tabPanel("B. Human Cardiac Hypertrophy",
+                   h3("1. Gene Regulation in Human Cardiac Hypertrophy "),
+                   h4("1.1 Bulk Transcriptomics"),
+                   plotOutput("HFgene_regulation_magnet", width = "100%", height = "500px") %>% withSpinner(),
+                   p(strong("Abbreviations:")),
+                   p("hs: human; RNA: RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; HCMrEF: HCM with reduced ejection fraction; HCMpEF: HCM with preserved ejection fraction; cHYP: compensated cardiac hypertrophy (non-failing); DCM: dilated cardiomyopathy; NF: non-failing healthy heart"),
+                   br(),
+                   h4("1.2 Single-Cell Transcriptomics"),
+                   plotOutput("HF_single", height = "900px", width = "100%") %>% withSpinner(),
+                   p(strong("Abbreviations:")),
+                   p("hs: human; snRNA: single nuclear RNA-Seq (transcriptional regulation); HCM: hypertrophic cardiomyopathy; DCM: dilated cardiomyopathy; NF: non-failing healthy heart; VSMC: Vascular smooth muscle cell; PC: Pericyte; Neu: Neuronal; MP: Macrophage; MC: Mast cell; Lympho: Lymphocyte; LEC: Lymphatic endothelial; FB: Fibroblast; Endo: Endocard; ECl: Endothelial; CM: Cardiomyocyte; Adipo: Adipocyte"),
+                   hr()
+          ),
+          tabPanel("C. Human Heart Failure",
+                   h3("1. Gene Regulation in Human Heart Failure (DCM and ICM Patients)"),
+                   HTML("<p> These results were compiled from a meta analysis of heart failure. For details please see
+                        <a href=' https://www.ahajournals.org/doi/full/10.1161/JAHA.120.019667'>ReHeaT</a> 
+                        and <a href='https://www.biorxiv.org/content/10.1101/2024.11.04.621815v2'>ReHeaT2</a>. 
+                        </p> "),
+                   h4("1.1 Bulk Transcriptomics"),
+                   plotOutput("HFgene_regulation_boxplot", width = "100%", height = "500px") %>% withSpinner(),
+                   h4("1.2 Distribution of Mean t-Values"),
+                   plotlyOutput("mean_t_dist", width = "100%", height = "250px") %>% withSpinner(),
+                   p("Genes positioned towards the left indicate strong and significant downregulation across studies. Genes towards the right indicate strong and significant upregulation."),
+                   h4("1.3 Ranking of Queried Genes"),
+                   plotlyOutput("rank_position", width = "100%", height = "125px") %>% withSpinner(),
+                   p("Consensus rankings display gene consistency in regulation across studies. Lower ranks indicate stronger and more consistent regulation."),
+                   
+                   hr()
+          ),
+          tabPanel("D. Fetal Gene Program",
+                   h3("1. Gene Regulation in Fetal Versus Adult Human Hearts"),
+                   plotOutput("fetal_gene_expression_plots", height = "250px"),
+                   p(strong("Abbreviations:")),
+                   p("hs: human; RNA: RNA-Seq"),
+                   p("Positive logFC values indicate higher expression in fetal hearts compared to adult hearts. Negative logFC values indicate lower expression."),
+                   hr()
           )
-    
+        )
+        )
       ),
-      
-      
-
 # Query contrasts -----------------------------------------------------------------------------
 tabPanel(
   title = "Custom Signature",
@@ -551,10 +499,13 @@ tabPanel(
           includeMarkdown("inst/meta_analysis_results_sidebar.md")
         ),
         mainPanel(
-          h4("How to access full data"),
+          h4("Access full data"),
           br(),
-          p("We provide a full data set of contrasts to be downloaded
-            from Zenodo. LINK"),
+          HTML("<p> We provide a full data set of contrasts to be downloaded
+            from 
+            <a href='https://doi.org/10.5281/zenodo.14509260'>Zenodo</a>.
+               </p> "),
+        
           p("You can download the .zip file and access the processed data"),
           br(),
           h4("Query data in a convenient table format"),

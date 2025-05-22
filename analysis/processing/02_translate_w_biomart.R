@@ -32,8 +32,81 @@ library(cowplot)
 project_path = "~/R-projects/Collaborations/cheerio/"
 
 joint_contrast_df<-readRDS(paste0(project_path,"data/contrasts_query_df_untranslated2.rds" ))
-colnames(joint_contrast_df)
-sort(unique(joint_contrast_df$contrast_id))
+#colnames(joint_contrast_df)
+#sort(unique(joint_contrast_df$contrast_id))
+
+
+
+#load Marts:
+mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+rat = useMart("ensembl", dataset = "rnorvegicus_gene_ensembl")
+
+# synonym conversion ------------------------------------------------------
+#there are some synonyms that will not be translated if mapped to the proper name
+
+message("start synonym converion")
+
+convert_synonyms_to_official <- function(df, gene_column, species_mart) {
+  # Pull unique gene names from the specified column
+  genes <- df[[gene_column]] %>% unique()
+  
+  # Query biomaRt for synonym to official symbol mapping
+  synonym_hits <- getBM(
+    attributes = c("external_synonym", "external_gene_name"),
+    filters = "external_synonym",
+    values = genes,
+    mart = species_mart
+  )
+  
+  # Build lookup table
+  syn_lookup <- synonym_hits %>%
+    filter(external_synonym != "") %>%
+    distinct(external_synonym, .keep_all = TRUE)
+  
+  message("Detected ", nrow(syn_lookup), " gene synonyms that map to official symbols.")
+  
+  # Add official gene column to original df
+  df <- df %>%
+    mutate(
+      gene_syn= gene,
+      gene = if_else(
+        .data[[gene_column]] %in% syn_lookup$external_synonym,
+        syn_lookup$external_gene_name[match(.data[[gene_column]], syn_lookup$external_synonym)],
+        .data[[gene_column]]
+      )
+    )
+  
+  return(df)
+}
+
+mouse_contrasts <- joint_contrast_df %>% filter(grepl("Mm", contrast_id) & !grepl("ENSMUSP", gene))
+mouse_contrasts_clean <- convert_synonyms_to_official(mouse_contrasts, gene_column = "gene", species_mart = mouse)
+
+human_contrasts <- joint_contrast_df %>% filter(grepl("Hs", contrast_id) & !grepl("prot", contrast_id))
+human_contrasts_clean <- convert_synonyms_to_official(human_contrasts, gene_column = "gene", species_mart = human)
+
+rat_contrasts <- joint_contrast_df %>% filter(grepl("Rn", contrast_id) & !grepl("prot", contrast_id))
+rat_contrasts_clean <- convert_synonyms_to_official(rat_contrasts, gene_column = "gene", species_mart = rat)
+
+
+# Combine cleaned subsets
+cleaned_all <- bind_rows(mouse_contrasts_clean, human_contrasts_clean, rat_contrasts_clean)
+
+translated_contrasts <- cleaned_all%>% pull(contrast_id)%>% unique()
+
+# Get all rows not in the cleaned subsets (based on gene + contrast_id)
+untouched_rows <- anti_join(
+  joint_contrast_df %>% filter(!contrast_id %in% translated_contrasts),
+  cleaned_all,
+  by = c("gene" = "gene_syn", "contrast_id")
+) %>%
+  mutate(gene_syn = gene) # Add gene_official column for consistency
+
+# Combine cleaned and untouched rows to overwrite the previous contrast df
+joint_contrast_df <- bind_rows(cleaned_all, untouched_rows)
+message("finished synonym converion")
+
 
 #get gene ides to be translated
 protein_ids <- joint_contrast_df%>% filter(grepl("ENSMUSP", gene))%>% pull(gene)%>% unique()
@@ -41,12 +114,12 @@ mouse_gene_ids <- joint_contrast_df %>% filter(grepl("Mm", contrast_id), !grepl(
 rat_gene_ids <- joint_contrast_df %>% filter(grepl("Rn", contrast_id) & grepl("ENSRN", gene))%>% pull(gene) %>% unique()
 rat_gene_ids_2 <- joint_contrast_df %>% filter(grepl("Rn", contrast_id) & !grepl("ENSRN", gene))%>% pull(gene) %>% unique()
 
-#load Marts:
-mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-rat = useMart("ensembl", dataset = "rnorvegicus_gene_ensembl")
+
+
 
 # 1. Mouse_protein -> Mouse_gene --------------------------------------
+
+message("starting species converion")
 mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 
 # Get the mapping between protein IDs and gene symbols
@@ -91,8 +164,8 @@ rat_to_human <- biomaRt::getBM(
 rat_to_human2 <- biomaRt::getBM(
   attributes = c("external_gene_name","ensembl_gene_id", "hsapiens_homolog_ensembl_gene", 
                  "hsapiens_homolog_associated_gene_name"),
-  #filters = "external_gene_name", # doublecheck this
-  filters = "ensembl_gene_id",
+  filters = "external_gene_name", # doublecheck this
+  #filters = "ensembl_gene_id",
   values = rat_gene_ids_2,
   mart = rat
 )
@@ -104,7 +177,7 @@ rat_to_human <- bind_rows(rat_to_human2, rat_to_human)
 write.csv(rat_to_human, paste0(project_path, "data/translated_rat_human_gene.csv"))
 
 
-
+message("finished species converion")
 # assess mappings and update the joint contrast_df -------------------------------------
 m_prot_to_m_gene <-read_csv(paste0(project_path, "data/translated_mm_prot_gene.csv"))
 mouse_to_human<- read_csv(paste0(project_path, "data/translated_mouse_human_gene.csv"))
@@ -185,7 +258,7 @@ ggplot(., aes(x = Conversion, y =prop, fill = Status)) +
   labs(x="", y="", fill ="")
 p.mapping.efficiency
 
-pdf("figures/mapping.efficiency.pdf",
+pdf(paste0(project_path,"figures/mapping.efficiency.pdf"),
     height= 5, width = 4)
 p.mapping.efficiency
 dev.off()
@@ -283,7 +356,7 @@ joint_df_translated%>%
   pull(unique_gene_count)%>% hist(., breaks=100)
   
 
-saveRDS(joint_df_translated, "data/contrasts_query_df_translated2.rds")
-
-
+saveRDS(joint_df_translated, paste0(project_path, "data/contrasts_query_df_translated2.rds"))
+joint_df_translated= readRDS(paste0(project_path, "data/contrasts_query_df_translated2.rds"))
+joint_df_translated%>% filter(gene == "UQCC5")
 

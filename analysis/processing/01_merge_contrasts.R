@@ -29,7 +29,7 @@ mm2= mm %>% mutate(GeneDescription= "",
 #          model ="fetal") 
 
 fetal2= readRDS(file = "data/fetalDEgenes_PRJNA522417.rds")%>% 
-  mutate(tp= "Hs_fetal_Spurell22", 
+  mutate(tp= "Hs_fetal_Spurrell22", 
          modal= "rna",
          model ="fetal") 
 
@@ -219,4 +219,5 @@ joint_contrast_df =
 colnames(joint_contrast_df)
 saveRDS(joint_contrast_df, "data/contrasts_query_df_untranslated2.rds")
 
+#joint_contrast_df = readRDS( "data/contrasts_query_df_untranslated2.rds")
 
